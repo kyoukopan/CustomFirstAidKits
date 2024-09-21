@@ -1,0 +1,12 @@
+{
+  "manifest": [
+    {
+      "key": "custom_afak.bundle",
+      "dependencyKeys": [
+        "assets/commonassets/physics/physicsmaterials.bundle",
+        "cubemaps",
+        "shaders"
+      ]
+    }
+  ]
+}
