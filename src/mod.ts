@@ -174,59 +174,6 @@ class Mod implements IPostDBLoadMod {
 
         logger.logWithColor("Custom First Aid Kits: Items added!", LogTextColor.YELLOW);
     }
-
-    createGrid(
-        container,
-        itemId,
-        columns: { cellH: number; cellV: number }[]
-    ): Grid[] {
-        const grids: Grid[] = [];
-
-        for (const [key, val] of Object.entries(columns)) {
-            grids.push(
-                this.generateColumn(
-                    container,
-                    itemId,
-                    `column_${key}`,
-                    val.cellH,
-                    val.cellV
-                )
-            );
-        }
-
-        return grids;
-    }
-
-    generateColumn(
-        container: DependencyContainer,
-        itemId,
-        name,
-        cellH,
-        cellV
-    ): Grid {
-        const hashUtil = container.resolve<HashUtil>("HashUtil");
-
-        return {
-            _name: name,
-            _id: hashUtil.generate(),
-            _parent: itemId,
-            _props: {
-                filters: [
-                    {
-                        Filter: allowedItems,
-                        ExcludedFilter: [],
-                    },
-                ],
-                cellsH: cellH,
-                cellsV: cellV,
-                minCount: 0,
-                maxCount: 0,
-                maxWeight: 0,
-                isSortingTable: false,
-            },
-            _proto: "55d329c24bdc2d892f8b4567",
-        };
-    }
 }
 
 export const mod = new Mod();
