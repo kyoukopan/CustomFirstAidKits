@@ -59,7 +59,7 @@ class Mod implements IPostDBLoadMod {
                 Grids: [
                     {
                         _name: "main",
-                        _id: "CustomIFAK-grid",
+                        _id: "CustomIFAKGrid",
                         _parent: "CustomIFAK",
                         _props: {
                             filters: [
@@ -100,7 +100,7 @@ class Mod implements IPostDBLoadMod {
 
         const therapist: ITrader = tables.traders[Traders.THERAPIST];
 
-        const emptyIfak = `${createdIfak.itemId}-empty`;
+        const emptyIfak = `${createdIfak.itemId}Empty`;
 
         therapist.assort.items.push({
             _id: emptyIfak,
@@ -126,7 +126,7 @@ class Mod implements IPostDBLoadMod {
 
         therapist.assort.loyal_level_items[emptyIfak] = 2;
 
-        const filledIfak = `${createdIfak.itemId}-filled`;
+        const filledIfak = `${createdIfak.itemId}Filled`;
 
         therapist.assort.items.push({
             _id: filledIfak,
@@ -141,19 +141,19 @@ class Mod implements IPostDBLoadMod {
             }
         },
         {
-            _id: `${filledIfak}-bandage`,
+            _id: `${filledIfak}Bandage`,
             _tpl: ItemTpl.MEDICAL_ARMY_BANDAGE,
             parentId: filledIfak,
             slotId: "main"
         },
         {
-            _id: `${filledIfak}-CAT`,
+            _id: `${filledIfak}CAT`,
             _tpl: ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET,
             parentId: filledIfak,
             slotId: "main"
         },
         {
-            _id: `${filledIfak}-CALOK`,
+            _id: `${filledIfak}CALOK`,
             _tpl: ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR,
             parentId: filledIfak,
             slotId: "main"
@@ -170,7 +170,7 @@ class Mod implements IPostDBLoadMod {
 
         therapist.assort.loyal_level_items[filledIfak] = 3;
 
-
+        logger.info(JSON.stringify(therapist.assort.barter_scheme[filledIfak]))
 
         logger.logWithColor("Custom First Aid Kits: Items added!", LogTextColor.YELLOW);
     }
