@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+/* eslint-disable @stylistic/ts/comma-dangle */
+/* eslint-disable @stylistic/ts/brace-style */
 
 /**
  * Build Script
