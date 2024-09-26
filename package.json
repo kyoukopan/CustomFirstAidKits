@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "author": "kyoukopan",
   "sptVersion": "~3.9",
-  "loadBefore": [
+  "loadBefore": [],
+  "loadAfter": [
     "SPT-Realism"
   ],
-  "loadAfter": [],
   "incompatibilities": [],
   "isBundleMod": false,
   "main": "src/mod.js",
