@@ -84,7 +84,8 @@ export default class ItemFactory
                 Weight: details.weight,
                 Width: ogItem._props.Width,
                 Height: ogItem._props.Height,
-                ItemSound: ogItem._props.ItemSound
+                ItemSound: ogItem._props.ItemSound,
+                BackgroundColor: ogItem._props.BackgroundColor
             };
 
             for (let i = 0; i < details.grids.length; i++) 
