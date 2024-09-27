@@ -1,4 +1,4 @@
 {
-  "replaceBaseItems": false,
-  "removeCustomItems": true
+  "replaceBaseItems": true,
+  "debug": true
 }

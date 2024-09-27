@@ -3,6 +3,7 @@ import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
 import { Money } from "@spt/models/enums/Money";
 import { Traders } from "@spt/models/enums/Traders";
+import { CustomMedkitItemTpl, type OriginalItemTpl } from "./types/Item";
 
 export interface ItemCfgInfo 
 {
@@ -30,7 +31,7 @@ export interface ItemCfgInfo
     }
 }
 
-export type ItemCfg = Partial<Record<ItemTpl, ItemCfgInfo>>;
+export type ItemCfg = Partial<Record<OriginalItemTpl, ItemCfgInfo>>;
 
 const bandages = [
     ItemTpl.MEDICAL_ARMY_BANDAGE,
@@ -68,7 +69,7 @@ const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...inj
 
 const itemCfg: ItemCfg = {
     [ItemTpl.MEDKIT_CAR_FIRST_AID_KIT]: {
-        idForNewItem: "CustomCarFAK",
+        idForNewItem: CustomMedkitItemTpl.CAR_FIRST_AID_KIT,
         price: 4000,
         grids: [
             { 
@@ -98,7 +99,7 @@ const itemCfg: ItemCfg = {
         }
     },
     [ItemTpl.MEDKIT_SALEWA_FIRST_AID_KIT]: {
-        idForNewItem: "CustomSalewa",
+        idForNewItem: CustomMedkitItemTpl.SALEWA_FIRST_AID_KIT,
         price: 20000,
         grids: [
             { 
@@ -141,7 +142,7 @@ const itemCfg: ItemCfg = {
         }
     },
     [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: {
-        idForNewItem: "CustomIFAK",
+        idForNewItem: CustomMedkitItemTpl.IFAK_FIST_AID_KIT,
         price: 16000,
         grids: [
             { 
@@ -180,7 +181,7 @@ const itemCfg: ItemCfg = {
         }
     },
     [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
-        idForNewItem: "CustomAFAK",
+        idForNewItem: CustomMedkitItemTpl.AFAK_FIRST_AID_KIT,
         price: 22000,
         grids: [
             {
@@ -211,7 +212,7 @@ const itemCfg: ItemCfg = {
         }
     },
     [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: {
-        idForNewItem: "CustomGrizzly",
+        idForNewItem: CustomMedkitItemTpl.GRIZZLY_FIRST_AID_KIT,
         price: 29000,
         grids: [
             {

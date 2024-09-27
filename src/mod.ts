@@ -7,20 +7,74 @@ import { LogBackgroundColor } from "@spt/models/spt/logging/LogBackgroundColor";
 import type { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { JsonUtil } from "@spt/utils/JsonUtil";
 
-import * as cfakCfg from "../config/config.json";
+import * as _cfakCfg from "../config/config.json";
 import { BotLootGenerator } from "@spt/generators/BotLootGenerator";
 import ItemFactory from "./utils/ItemFactory";
+import CustomBotLootGenerator from "./utils/CustomBotLootGenerator";
+import { HashUtil } from "@spt/utils/HashUtil";
+import { RandomUtil } from "@spt/utils/RandomUtil";
+import { ItemHelper } from "@spt/helpers/ItemHelper";
+import { InventoryHelper } from "@spt/helpers/InventoryHelper";
+import { DatabaseService } from "@spt/services/DatabaseService";
+import { HandbookHelper } from "@spt/helpers/HandbookHelper";
+import { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
+import { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
+import { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
+import { BotHelper } from "@spt/helpers/BotHelper";
+import { BotLootCacheService } from "@spt/services/BotLootCacheService";
+import { LocalisationService } from "@spt/services/LocalisationService";
+import { ConfigServer } from "@spt/servers/ConfigServer";
+import type { ICloner } from "@spt/utils/cloners/ICloner";
+import type CfakConfig from "./utils/types/CfakConfig";
+import Logger, { LoggerLvl } from "./utils/Logger";
 
 class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
 {
-    private static container: DependencyContainer;
-    private static jsonUtil: JsonUtil;
+    private logger: Logger;
+    private cfakCfg: CfakConfig;
+    private replaceBaseItems: boolean;
     private originalLootGenerator: BotLootGenerator["generateLoot"];
 
     public preSptLoad(container: DependencyContainer): void 
     {
-        CustomFirstAidKits.container = container;
-        CustomFirstAidKits.jsonUtil = container.resolve(JsonUtil);
+        this.cfakCfg = _cfakCfg;
+        const sptLogger = container.resolve<ILogger>("WinstonLogger");
+        const hashUtil = container.resolve(HashUtil);
+        const randomUtil = container.resolve(RandomUtil);
+        const itemHelper = container.resolve(ItemHelper);
+        const inventoryHelper = container.resolve(InventoryHelper);
+        const databaseService = container.resolve(DatabaseService);
+        const handbookHelper = container.resolve(HandbookHelper);
+        const botGeneratorHelper = container.resolve(BotGeneratorHelper);
+        const botWeaponGenerator = container.resolve(BotWeaponGenerator);
+        const weightedRandomHelper = container.resolve(WeightedRandomHelper);
+        const botHelper = container.resolve(BotHelper);
+        const botLootCacheService = container.resolve(BotLootCacheService);
+        const localisationService = container.resolve(LocalisationService);
+        const configServer = container.resolve(ConfigServer);
+        const cloner = container.resolve<ICloner>("PrimaryCloner");
+        this.logger = new Logger(this.cfakCfg, sptLogger);
+        this.replaceBaseItems = this.cfakCfg.replaceBaseItems;
+        
+        const customBotLootGenerator = new CustomBotLootGenerator(
+            sptLogger,
+            hashUtil,
+            randomUtil,
+            itemHelper,
+            inventoryHelper,
+            databaseService,
+            handbookHelper,
+            botGeneratorHelper,
+            botWeaponGenerator,
+            weightedRandomHelper,
+            botHelper,
+            botLootCacheService,
+            localisationService,
+            configServer,
+            cloner,
+            this.cfakCfg,
+            this.logger
+        )
         
 
         container.afterResolution(
@@ -28,53 +82,23 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             (_token, botLootGen: BotLootGenerator) => 
             {
                 this.originalLootGenerator = botLootGen.generateLoot;
-                botLootGen.generateLoot = this.customGenerateLoot;
+                botLootGen.generateLoot = (...args): void => customBotLootGenerator.generateLoot(...args);
             }
         );
+        this.logger.log("Updated loot generator to include custom containers!");
     }
-
-    private customGenerateLoot: BotLootGenerator["generateLoot"] = (
-        sessionId,
-        botJsonTemplate,
-        isPmc,
-        botRole,
-        botInventory,
-        botLevel
-    ) => 
-    {
-        this.originalLootGenerator(
-            sessionId,
-            botJsonTemplate,
-            isPmc,
-            botRole,
-            botInventory,
-            botLevel
-        );
-    }; // ??? should we be looking at addLootFromPool instead? but it's protected https://dev.sp-tarkov.com/SPT/Server/src/branch/3.9.x-DEV/project/src/generators/BotLootGenerator.ts
 
     public postDBLoad(container: DependencyContainer): void 
     {
 
-        const logger = container.resolve<ILogger>("WinstonLogger");
-
-        logger.logWithColor(
-            "Custom First Aid Kits: This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!",
-            LogTextColor.BLACK,
-            LogBackgroundColor.YELLOW
-        );
+        this.logger.log("This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!", LoggerLvl.HEADER);
 
         ItemFactory.init(container);
-        const itemFactory = new ItemFactory(cfakCfg.replaceBaseItems);
+        const itemFactory = new ItemFactory(this.replaceBaseItems, this.logger);
         itemFactory.createItems();
-        logger.logWithColor(
-            "Custom First Aid Kits: Items added!",
-            LogTextColor.YELLOW
-        );
+        this.logger.log("Items added!");
         itemFactory.barterChanges();
-        logger.logWithColor(
-            "Custom First Aid Kits: Trades updated!",
-            LogTextColor.YELLOW
-        );
+        this.logger.log("Trades updated!");
 
 
         // Add to trader stock:

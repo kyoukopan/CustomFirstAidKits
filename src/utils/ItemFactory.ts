@@ -7,14 +7,19 @@ import { DatabaseService } from "@spt/services/DatabaseService";
 import { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type { DependencyContainer } from "tsyringe";
-import itemCfg, { type ItemCfgInfo } from "./itemCfg";
+import itemCfg from "./itemCfg";
+import GridHelper from "./GridHelper";
+import { HashUtil } from "@spt/utils/HashUtil";
+import type Logger from "./Logger";
+import { LoggerLvl } from "./Logger";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
 export default class ItemFactory 
 {
+    private logger: Logger;
     static container: DependencyContainer;
-    static logger: ILogger;
+    static hashUtil: HashUtil;
     static cloner: ICloner;
     static dbService: DatabaseService;
     static itemBaseClassService: ItemBaseClassService;
@@ -31,8 +36,8 @@ export default class ItemFactory
         ItemFactory.itemHelper = container.resolve(ItemHelper);
         ItemFactory.dbService = container.resolve(DatabaseService);
         ItemFactory.itemBaseClassService = container.resolve(ItemBaseClassService);
-        ItemFactory.logger = container.resolve("WinstonLogger");
         ItemFactory.cloner = container.resolve("PrimaryCloner");
+        ItemFactory.hashUtil = container.resolve(HashUtil);
 
         ItemFactory.itemsTable = ItemFactory.dbService.getItems();
         ItemFactory.handbook = ItemFactory.dbService.getHandbook();
@@ -42,10 +47,12 @@ export default class ItemFactory
         /** If true, we will replace the original items with custom items.
 		 * If false, the custom items will be separate from the vanilla ones.
 		 */
-        replaceOriginal: boolean
+        replaceOriginal: boolean,
+        logger: Logger
     ) 
     {
         this.replaceOriginal = replaceOriginal;
+        this.logger = logger;
     }
 
     /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
@@ -58,9 +65,7 @@ export default class ItemFactory
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
             if (!succ) 
             {
-                ItemFactory.logger.error(
-                    `Custom First Aid Kits: Unable to find original item ${originalId} in item DB`
-                );
+                this.logger.log(`Unable to find original item ${originalId} in item DB`, LoggerLvl.ERROR);
             }
 
             const [siccSucc, sicc] = ItemFactory.itemHelper.getItem(
@@ -68,9 +73,7 @@ export default class ItemFactory
             );
             if (!siccSucc) 
             {
-                ItemFactory.logger.error(
-                    "Custom First Aid Kits: Couldn't get original SICC for cloning"
-                );
+                this.logger.log("Couldn't get original SICC for cloning", LoggerLvl.ERROR);
             }
 
             const newItem = ItemFactory.cloner.clone(sicc);
@@ -88,12 +91,14 @@ export default class ItemFactory
                 BackgroundColor: ogItem._props.BackgroundColor
             };
 
+            const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
+
             for (let i = 0; i < details.grids.length; i++) 
             {
                 const gridSizes = details.grids[i];
                 newItem._props.Grids.push({
-                    _name: this.getGridNameId(details.idForNewItem, i),
-                    _id: this.getGridNameId(details.idForNewItem, i),
+                    _name: gridHelper.getGridNameId(i),
+                    _id: gridHelper.getGridNameId(i),
                     _parent: idToUse,
                     _props: {
                         filters: [
@@ -153,12 +158,16 @@ export default class ItemFactory
         for (const originalId in itemCfg) 
         {
             const details = itemCfg[originalId as ItemTpl];
-            const gridSlotCounts = this.getGridSlotCounts(details);
+            const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
+
+            const gridSlotCounts = gridHelper.getGridSlotCounts();
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
 
             // Add contents to all existing barters/purchases
             for (const trader of Object.values(traders)) 
             {
+                if (trader.assort?.items == null) continue;
+
                 // Find all barter IDs that have this item as a product or make our own
                 const barterIds: string[] = [];
                 if (this.replaceOriginal) 
@@ -236,7 +245,7 @@ export default class ItemFactory
                                 _id: `${barterId}Item${currItem}`,
                                 _tpl: details.bundled[currItem],
                                 parentId: barterId,
-                                slotId: this.getGridNameId(details.idForNewItem, currGrid)
+                                slotId: gridHelper.getGridNameId(currGrid)
                             });
                             if (currSlotInGrid === gridSlotCounts[currGrid] - 1) 
                             {
@@ -251,30 +260,11 @@ export default class ItemFactory
                     }
                     catch 
                     {
-                        ItemFactory.logger.error(
-                            `Custom First Aid Kits: Error adding items into barter for barter ID ${barterId}`
-                        );
+                        this.logger.log(`Error adding items into barter for barter ID ${barterId}`, LoggerLvl.ERROR);
                     }
                 }
             }
         }
-    }
-
-    /** Returns the number of total slots in each of the item's grids. e.g. [1,2] = 1 slot in first grid and 2 in second */
-    private getGridSlotCounts(item: ItemCfgInfo): number[] 
-    {
-        const result: number[] = [];
-        for (const grid of item.grids) 
-        {
-            result.push(grid.cellsH * grid.cellsV);
-        }
-        return result;
-    }
-
-    /** Used to identify the grid props inside each item */
-    private getGridNameId(id: string, idx: number) 
-    {
-        return `${id}Grid${idx}`;
     }
 
     /** Unique ID for each barter */
