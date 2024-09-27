@@ -51,19 +51,95 @@ const splints = [
     ItemTpl.MEDICAL_ALUMINUM_SPLINT
 ];
 
+const injectors = [
+    BaseClasses.STIMULATOR,
+    ItemTpl.DRUGS_MORPHINE_INJECTOR
+];
+
 const misc = [
     ItemTpl.DRUGS_ANALGIN_PAINKILLERS,
     ItemTpl.DRUGS_GOLDEN_STAR_BALM,
     ItemTpl.DRUGS_VASELINE_BALM,
-    ItemTpl.DRUGS_MORPHINE_INJECTOR,
     ItemTpl.MEDKIT_AI2,
-    ItemTpl.DRINK_EMERGENCY_WATER_RATION,
-    BaseClasses.STIMULATOR
+    ItemTpl.DRINK_EMERGENCY_WATER_RATION
 ];
 
-const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...misc];
+const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...injectors, ...misc];
 
 const itemCfg: ItemCfg = {
+    [ItemTpl.MEDKIT_CAR_FIRST_AID_KIT]: {
+        idForNewItem: "CustomCarFAK",
+        price: 4000,
+        grids: [
+            { 
+                cellsV: 1,
+                cellsH: 2
+            },
+            {
+                cellsV: 1,
+                cellsH: 2
+            }
+        ],
+        weight: 0.12,
+        allowedItems: [...bandages, ...misc],
+        locale: {
+            name: "Custom Car First Aid Kit",
+            shortName: "C-CAR",
+            description:
+              "An IFAK pouch that you can fill with your choice of first aid equipment.\nAccepts bandages, AI-2, balms, analgin, and emergency water."
+
+        },
+        bundled: [ItemTpl.MEDICAL_ASEPTIC_BANDAGE, ItemTpl.MEDICAL_ASEPTIC_BANDAGE, ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_ARMY_BANDAGE],
+        bundlePrice: 14269,
+        currency: Money.ROUBLES,
+        soldBy: Traders.THERAPIST,
+        loyalLevel: {
+            buy: 1
+        }
+    },
+    [ItemTpl.MEDKIT_SALEWA_FIRST_AID_KIT]: {
+        idForNewItem: "CustomSalewa",
+        price: 20000,
+        grids: [
+            { 
+                cellsV: 2,
+                cellsH: 1
+            },
+            {
+                cellsV: 2,
+                cellsH: 1
+            },
+            {
+                cellsV: 1,
+                cellsH: 1
+            }
+        ],
+        weight: 0.2,
+        allowedItems: allItems,
+        locale: {
+            name: "Custom Salewa",
+            shortName: "C-Salewa",
+            description:
+              "A Salewa first aid kit that you can fill with your choice of first aid equipment.\nAccepts bandages, tourniquets/CALOK-B, splints, injectors, AI-2, balms, analgin, and emergency water."
+
+        },
+        bundled: [ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_ASEPTIC_BANDAGE, ItemTpl.MEDICAL_ESMARCH_TOURNIQUET, ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, ItemTpl.DRINK_EMERGENCY_WATER_RATION],
+        bundlePrice: 39420,
+        currency: Money.ROUBLES,
+        // customBarter: [
+        //     [
+        //         {
+        //             _tpl: ItemTpl.BARTER_BOTTLE_OF_SALINE_SOLUTION,
+        //             count: 2
+        //         }
+        //     ]
+        // ],
+        soldBy: Traders.THERAPIST,
+        loyalLevel: {
+            buy: 2
+            // barter: 2
+        }
+    },
     [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: "CustomIFAK",
         price: 16000,
@@ -105,7 +181,7 @@ const itemCfg: ItemCfg = {
     },
     [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: "CustomAFAK",
-        price: 28000,
+        price: 22000,
         grids: [
             {
                 cellsV: 2,
@@ -132,6 +208,45 @@ const itemCfg: ItemCfg = {
         loyalLevel: {
             buy: 4,
             barter: 2
+        }
+    },
+    [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: {
+        idForNewItem: "CustomGrizzly",
+        price: 29000,
+        grids: [
+            {
+                cellsV: 2,
+                cellsH: 2
+            },
+            {
+                cellsV: 2,
+                cellsH: 2
+            }
+        ],
+        weight: 0.4,
+        allowedItems: allItems,
+        locale: {
+            name: "Custom Grizzly Medical Kit",
+            shortName: "C-GRIZZLY",
+            description:
+              "A Grizzly bag that you can fill with your choice of first aid equipment.\nAccepts bandages, tourniquets/CALOK-B, splints, injectors, AI-2, balms, analgin, and emergency water."
+
+        },
+        bundled: [
+            ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET,
+            ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, 
+            ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET, 
+            ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, 
+            ItemTpl.MEDICAL_ARMY_BANDAGE,
+            ItemTpl.MEDICAL_ASEPTIC_BANDAGE,
+            ItemTpl.MEDICAL_ASEPTIC_BANDAGE,
+            ItemTpl.MEDICAL_ALUMINUM_SPLINT
+        ],
+        bundlePrice: 80420,
+        currency: Money.ROUBLES,
+        soldBy: Traders.THERAPIST,
+        loyalLevel: {
+            buy: 4
         }
     }
 }

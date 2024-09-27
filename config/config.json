@@ -1,11 +1,4 @@
 {
   "replaceBaseItems": false,
-  "items": {
-    "IFAK": {
-      "interiorGrid": {
-        "vertical": 3,
-        "horizontal": 1
-      }
-    }
-  }
+  "removeCustomItems": true
 }

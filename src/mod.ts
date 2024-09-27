@@ -1,47 +1,15 @@
-import { DependencyContainer } from "tsyringe";
+import type { DependencyContainer } from "tsyringe";
 
-import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
-import { ILogger } from "@spt/models/spt/utils/ILogger";
+import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
+import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import { LogTextColor } from "@spt/models/spt/logging/LogTextColor";
 import { LogBackgroundColor } from "@spt/models/spt/logging/LogBackgroundColor";
-import { IPostSptLoadMod } from "@spt/models/external/IPostSptLoadMod";
-import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
-import { HashUtil } from "@spt/utils/HashUtil";
+import type { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { JsonUtil } from "@spt/utils/JsonUtil";
-import { DatabaseServer } from "@spt/servers/DatabaseServer";
 
 import * as cfakCfg from "../config/config.json";
-import { CustomItemService } from "@spt/services/mod/CustomItemService";
-import { NewItemFromCloneDetails } from "@spt/models/spt/mod/NewItemDetails";
-import { ITrader } from "@spt/models/eft/common/tables/ITrader";
-import { Money } from "@spt/models/enums/Money";
-import { BaseClasses } from "@spt/models/enums/BaseClasses";
-import { Grid, ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
-import { ItemTpl } from "@spt/models/enums/ItemTpl";
-import { Traders } from "@spt/models/enums/Traders";
 import { BotLootGenerator } from "@spt/generators/BotLootGenerator";
-import { DatabaseService } from "@spt/services/DatabaseService";
-import { Item } from "@spt/models/eft/common/tables/IItem";
-import { ItemHelper } from "@spt/helpers/ItemHelper";
-import { ICloner } from "@spt/utils/cloners/ICloner";
 import ItemFactory from "./utils/ItemFactory";
-import CfakConfig from "./utils/types/config";
-
-const allowedItems = [
-    ItemTpl.MEDICAL_ARMY_BANDAGE,
-    ItemTpl.MEDICAL_ASEPTIC_BANDAGE,
-    ItemTpl.MEDICAL_ESMARCH_TOURNIQUET,
-    ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET,
-    ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR,
-    ItemTpl.MEDICAL_IMMOBILIZING_SPLINT,
-    ItemTpl.MEDICAL_ALUMINUM_SPLINT,
-    ItemTpl.DRUGS_ANALGIN_PAINKILLERS,
-    ItemTpl.DRUGS_GOLDEN_STAR_BALM,
-    ItemTpl.DRUGS_VASELINE_BALM,
-    ItemTpl.DRUGS_MORPHINE_INJECTOR,
-    ItemTpl.MEDKIT_AI2,
-    BaseClasses.STIMULATOR
-];
 
 class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
 {
@@ -86,17 +54,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
 
     public postDBLoad(container: DependencyContainer): void 
     {
-        const customItemService =
-            container.resolve<CustomItemService>("CustomItemService");
-        const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
-        const tables = databaseServer.getTables();
-        const databaseService = container.resolve<DatabaseService>(DatabaseService);
-        const itemHelper = container.resolve<ItemHelper>(ItemHelper);
+
         const logger = container.resolve<ILogger>("WinstonLogger");
-        const cloner = container.resolve<ICloner>("PrimaryCloner");
-
-
-        const therapist: ITrader = tables.traders[Traders.THERAPIST];
 
         logger.logWithColor(
             "Custom First Aid Kits: This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!",
