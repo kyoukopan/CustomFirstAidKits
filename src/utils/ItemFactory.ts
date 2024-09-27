@@ -1,16 +1,13 @@
-import { Item } from "@spt/models/eft/common/tables/IItem";
+import type { HandbookHelper } from "@spt/helpers/HandbookHelper";
+import { ItemHelper } from "@spt/helpers/ItemHelper";
 import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
-import { NewItemFromCloneDetails } from "@spt/models/spt/mod/NewItemDetails";
-import { CustomItemService } from "@spt/services/mod/CustomItemService";
-import { DependencyContainer } from "tsyringe";
-import itemCfg, { ItemCfgInfo } from "./itemCfg";
+import type { ILogger } from "@spt/models/spt/utils/ILogger";
 import { DatabaseService } from "@spt/services/DatabaseService";
-import { ItemHelper } from "@spt/helpers/ItemHelper";
-import { ILogger } from "@spt/models/spt/utils/ILogger";
-import { ICloner } from "@spt/utils/cloners/ICloner";
-import { HandbookHelper } from "@spt/helpers/HandbookHelper";
 import { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
+import type { ICloner } from "@spt/utils/cloners/ICloner";
+import type { DependencyContainer } from "tsyringe";
+import itemCfg, { type ItemCfgInfo } from "./itemCfg";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
@@ -23,36 +20,36 @@ export default class ItemFactory
     static itemBaseClassService: ItemBaseClassService;
     static itemHelper: ItemHelper;
     static handbookHelper: HandbookHelper;
-    static itemsTable: ReturnType<DatabaseService["getItems"]>
-    static handbook: ReturnType<DatabaseService["getHandbook"]>
-    
+    static itemsTable: ReturnType<DatabaseService["getItems"]>;
+    static handbook: ReturnType<DatabaseService["getHandbook"]>;
+
     private replaceOriginal: boolean;
 
-    public static init(container: DependencyContainer): void
+    public static init(container: DependencyContainer): void 
     {
-        this.container = container;
-        this.itemHelper = container.resolve(ItemHelper);
-        this.dbService = container.resolve(DatabaseService);
-        this.itemBaseClassService = container.resolve(ItemBaseClassService);
-        this.logger = container.resolve("WinstonLogger");
-        this.cloner = container.resolve("PrimaryCloner");
+        ItemFactory.container = container;
+        ItemFactory.itemHelper = container.resolve(ItemHelper);
+        ItemFactory.dbService = container.resolve(DatabaseService);
+        ItemFactory.itemBaseClassService = container.resolve(ItemBaseClassService);
+        ItemFactory.logger = container.resolve("WinstonLogger");
+        ItemFactory.cloner = container.resolve("PrimaryCloner");
 
-        this.itemsTable = this.dbService.getItems();
-        this.handbook = this.dbService.getHandbook();
+        ItemFactory.itemsTable = ItemFactory.dbService.getItems();
+        ItemFactory.handbook = ItemFactory.dbService.getHandbook();
     }
 
     public constructor(
         /** If true, we will replace the original items with custom items.
-         * If false, the custom items will be separate from the vanilla ones.
-         */
+		 * If false, the custom items will be separate from the vanilla ones.
+		 */
         replaceOriginal: boolean
-    )
+    ) 
     {
         this.replaceOriginal = replaceOriginal;
     }
 
     /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
-    public createItems(): void
+    public createItems(): void 
     {
         for (const originalId in itemCfg) 
         {
@@ -61,13 +58,19 @@ export default class ItemFactory
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
             if (!succ) 
             {
-                ItemFactory.logger.error(`Custom First Aid Kits: Unable to find original item ${originalId} in item DB`);
+                ItemFactory.logger.error(
+                    `Custom First Aid Kits: Unable to find original item ${originalId} in item DB`
+                );
             }
 
-            const [siccSucc, sicc] = ItemFactory.itemHelper.getItem(ItemTpl.CONTAINER_SICC);
-            if (!siccSucc)
+            const [siccSucc, sicc] = ItemFactory.itemHelper.getItem(
+                ItemTpl.CONTAINER_SICC
+            );
+            if (!siccSucc) 
             {
-                ItemFactory.logger.error("Custom First Aid Kits: Couldn't get original SICC for cloning");
+                ItemFactory.logger.error(
+                    "Custom First Aid Kits: Couldn't get original SICC for cloning"
+                );
             }
 
             const newItem = ItemFactory.cloner.clone(sicc);
@@ -87,45 +90,44 @@ export default class ItemFactory
             for (let i = 0; i < details.grids.length; i++) 
             {
                 const gridSizes = details.grids[i];
-                newItem._props.Grids.push(
-                    {
-                        _name: this.getGridNameId(details.idForNewItem, i),
-                        _id: this.getGridNameId(details.idForNewItem, i),
-                        _parent: idToUse,
-                        _props: {
-                            filters: [
-                                {
-                                    Filter: details.allowedItems, 
-                                    ExcludedFilter: []
-                                }
-                            ],
-                            minCount: 0,
-                            maxCount: 0,
-                            isSortingTable: false,
-                            maxWeight: 0,
-                            ...gridSizes  
-                        },
-                        _proto: "55d329c24bdc2d892f8b4567"
-                    }
-                )
+                newItem._props.Grids.push({
+                    _name: this.getGridNameId(details.idForNewItem, i),
+                    _id: this.getGridNameId(details.idForNewItem, i),
+                    _parent: idToUse,
+                    _props: {
+                        filters: [
+                            {
+                                Filter: details.allowedItems,
+                                ExcludedFilter: []
+                            }
+                        ],
+                        minCount: 0,
+                        maxCount: 0,
+                        isSortingTable: false,
+                        maxWeight: 0,
+                        ...gridSizes
+                    },
+                    _proto: "55d329c24bdc2d892f8b4567"
+                });
             }
 
             // For the following, if replaceOriginal is false, we add new entries
             // Otherwise, we modify the existing item since idToUse is the original item's ID
-            
+
             // Item DB
             ItemFactory.itemsTable[idToUse] = newItem;
             // Flea prices
             ItemFactory.dbService.getPrices()[idToUse] = details.price;
 
-
             if (this.replaceOriginal) 
             {
                 // Handbook
-                const hbIdx = ItemFactory.handbook.Items.findIndex((item) => item.Id === idToUse); // Find the item in the handbook item array
+                const hbIdx = ItemFactory.handbook.Items.findIndex(
+                    (item) => item.Id === idToUse
+                ); // Find the item in the handbook item array
                 ItemFactory.handbook.Items[hbIdx].Price = details.price; // Id and Parent can stay the same, just change price
             }
-            else
+            else 
             {
                 // Handbook
                 ItemFactory.handbook.Items.push({
@@ -135,17 +137,16 @@ export default class ItemFactory
                 });
 
                 // Add to locales (not needed if replacing existing)
-                const locale = ItemFactory.dbService.getLocales().global["en"];
+                const locale = ItemFactory.dbService.getLocales().global.en;
                 locale[`${idToUse} Name`] = details.locale.name;
                 locale[`${idToUse} ShortName`] = details.locale.shortName;
                 locale[`${idToUse} Description`] = details.locale.description;
-                
             }
         }
     }
 
     /** Adds/updates barter schemes with filled first aid kits */
-    public barterChanges(): void
+    public barterChanges(): void 
     {
         const traders = ItemFactory.dbService.getTraders();
         for (const originalId in itemCfg) 
@@ -155,58 +156,88 @@ export default class ItemFactory
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
 
             // Add contents to all existing barters/purchases
-            for (const trader of Object.values(traders))
+            for (const trader of Object.values(traders)) 
             {
                 // Find all barter IDs that have this item as a product or make our own
                 const barterIds: string[] = [];
-                if (this.replaceOriginal)
+                if (this.replaceOriginal) 
                 {
-                    trader.assort?.items?.forEach((item) => 
+                    for (const item of Object.values(trader.assort?.items))
                     {
-                        if (item._tpl === idToUse)
+                        if (item._tpl === idToUse) 
                         {
                             barterIds.push(item._id);
                         }
-                    });
+                    }
                 }
                 else 
                 {
-                    trader.assort?.items?.push({_id: this.getBarterId(idToUse, 0), _tpl: idToUse, upd: {
-                        UnlimitedCount: true,
-                        StackObjectsCount: 999999,
-                        BuyRestrictionMax: 5,
-                        BuyRestrictionCurrent: 0
-                    }});
-                    barterIds.push(this.getBarterId(idToUse, 0));
-                    if (details.customBarter != null) 
+                    // Add a new base item for barters
+                    if (trader.base._id === details.soldBy) 
                     {
-                        trader.assort?.items?.push({_id: this.getBarterId(idToUse, 1), 
-                            _tpl: idToUse, upd: {
+                        const barterBuyId = this.getBarterId(idToUse, "Buy", 0);
+                        trader.assort?.items?.push({
+                            _id: barterBuyId,
+                            _tpl: idToUse,
+                            parentId: "hideout",
+                            slotId: "hideout",
+                            upd: {
                                 UnlimitedCount: true,
                                 StackObjectsCount: 999999,
                                 BuyRestrictionMax: 5,
-                                BuyRestrictionCurrent: 0}
+                                BuyRestrictionCurrent: 0
+                            }
                         });
-                        barterIds.push(this.getBarterId(idToUse, 1));
+                        barterIds.push(barterBuyId);
+                        if (details.customBarter != null) 
+                        {
+                            const barterBarterId = this.getBarterId(idToUse, "Barter", 0);
+                            trader.assort?.items?.push({
+                                _id: barterBarterId,
+                                _tpl: idToUse,
+                                parentId: "hideout",
+                                slotId: "hideout",
+                                upd: {
+                                    UnlimitedCount: true,
+                                    StackObjectsCount: 999999,
+                                    BuyRestrictionMax: 5,
+                                    BuyRestrictionCurrent: 0
+                                }
+                            });
+                            barterIds.push(barterBarterId);
+                        }
                     }
                 }
-                for (const barterId of barterIds)
+                for (const barterId of barterIds) 
                 {
-                    ItemFactory.logger.info(`-- Barter: ${barterId}`);
+                    if (!this.replaceOriginal) 
+                    {
+                        // Add barter details
+                        const bType = this.getBarterSchemeDetails(barterId);
+                        trader.assort.barter_scheme[barterId] = [...(bType === "Barter" ? details.customBarter : [
+                            [{
+                                _tpl: details.currency,
+                                count: details.bundlePrice
+                            }]
+                        ])];
+                        // Add loyalty level info
+                        trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
+                    }
+
+                    // Add items to slots
                     try 
                     {
                         let currGrid = 0; // Can have multiple grids in each kit
                         let currSlotInGrid = 0; // Tracks which slots we have filled so we don't go out of bounds
-                        for (const currItem in details.bundled)
+                        for (const currItem in details.bundled) 
                         {
-                            const result = trader.assort?.items?.push({
+                            trader.assort?.items?.push({
                                 _id: `${barterId}Item${currItem}`,
                                 _tpl: details.bundled[currItem],
                                 parentId: barterId,
                                 slotId: this.getGridNameId(details.idForNewItem, currGrid)
                             });
-                            ItemFactory.logger.info(`Item: ${currItem} currGrid: ${currGrid} currSlot: ${currSlotInGrid} ${JSON.stringify(trader.assort?.items[result - 1])}`)
-                            if (currSlotInGrid === gridSlotCounts[currGrid] - 1)
+                            if (currSlotInGrid === gridSlotCounts[currGrid] - 1) 
                             {
                                 currGrid++;
                                 currSlotInGrid = 0;
@@ -219,19 +250,20 @@ export default class ItemFactory
                     }
                     catch 
                     {
-                        ItemFactory.logger.error(`Custom First Aid Kits: Error adding items into barter for barter ID ${barterId}`);
+                        ItemFactory.logger.error(
+                            `Custom First Aid Kits: Error adding items into barter for barter ID ${barterId}`
+                        );
                     }
                 }
             }
         }
-            
     }
 
     /** Returns the number of total slots in each of the item's grids. e.g. [1,2] = 1 slot in first grid and 2 in second */
-    private getGridSlotCounts(item: ItemCfgInfo): number[]
+    private getGridSlotCounts(item: ItemCfgInfo): number[] 
     {
         const result: number[] = [];
-        for (const grid of item.grids)
+        for (const grid of item.grids) 
         {
             result.push(grid.cellsH * grid.cellsV);
         }
@@ -239,14 +271,20 @@ export default class ItemFactory
     }
 
     /** Used to identify the grid props inside each item */
-    private getGridNameId(id: string, idx: number)
+    private getGridNameId(id: string, idx: number) 
     {
-        return `${id}Grid${idx}`
+        return `${id}Grid${idx}`;
     }
 
-    /** Used to identify the grid props inside each item */
-    private getBarterId(id: string, idx: number)
+    /** Unique ID for each barter */
+    private getBarterId(id: string, type: "Buy" | "Barter", idx: number) 
     {
-        return `${id}${idx}Scheme`
+        return `${id}99${type}99${idx}`;
+    }
+
+    private getBarterSchemeDetails(id: string): "Buy" | "Barter"
+    {
+        const split = id.split("99");
+        return split[1] as "Buy" | "Barter";
     }
 }

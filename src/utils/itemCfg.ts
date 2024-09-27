@@ -1,6 +1,8 @@
-import { IBarterScheme } from "@spt/models/eft/common/tables/ITrader";
+import type { IBarterScheme } from "@spt/models/eft/common/tables/ITrader";
 import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
+import { Money } from "@spt/models/enums/Money";
+import { Traders } from "@spt/models/enums/Traders";
 
 export interface ItemCfgInfo 
 {
@@ -19,7 +21,13 @@ export interface ItemCfgInfo
     weight: number;
     bundled?: ItemTpl[];
     bundlePrice?: number;
-    customBarter?: IBarterScheme[][]
+    currency: Money;
+    customBarter?: IBarterScheme[][];
+    soldBy: Traders;
+    loyalLevel: {
+        buy: number,
+        barter?: number
+    }
 }
 
 export type ItemCfg = Partial<Record<ItemTpl, ItemCfgInfo>>;
@@ -80,6 +88,7 @@ const itemCfg: ItemCfg = {
         },
         bundled: [ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET],
         bundlePrice: 50000,
+        currency: Money.ROUBLES,
         customBarter: [
             [
                 {
@@ -87,7 +96,12 @@ const itemCfg: ItemCfg = {
                     count: 2
                 }
             ]
-        ]
+        ],
+        soldBy: Traders.THERAPIST,
+        loyalLevel: {
+            buy: 3,
+            barter: 2
+        }
     },
     [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: "CustomAFAK",
@@ -112,7 +126,13 @@ const itemCfg: ItemCfg = {
 
         },
         bundled: [ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_IMMOBILIZING_SPLINT, ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET],
-        bundlePrice: 80000
+        bundlePrice: 549,
+        currency: Money.DOLLARS,
+        soldBy: Traders.PEACEKEEPER,
+        loyalLevel: {
+            buy: 4,
+            barter: 2
+        }
     }
 }
 export default itemCfg;

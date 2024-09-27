@@ -43,19 +43,22 @@ const allowedItems = [
     BaseClasses.STIMULATOR
 ];
 
-class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod {
+class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
+{
     private static container: DependencyContainer;
     private static jsonUtil: JsonUtil;
     private originalLootGenerator: BotLootGenerator["generateLoot"];
 
-    public preSptLoad(container: DependencyContainer): void {
+    public preSptLoad(container: DependencyContainer): void 
+    {
         CustomFirstAidKits.container = container;
         CustomFirstAidKits.jsonUtil = container.resolve(JsonUtil);
         
 
         container.afterResolution(
             BotLootGenerator,
-            (_token, botLootGen: BotLootGenerator) => {
+            (_token, botLootGen: BotLootGenerator) => 
+            {
                 this.originalLootGenerator = botLootGen.generateLoot;
                 botLootGen.generateLoot = this.customGenerateLoot;
             }
@@ -69,7 +72,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod {
         botRole,
         botInventory,
         botLevel
-    ) => {
+    ) => 
+    {
         this.originalLootGenerator(
             sessionId,
             botJsonTemplate,
@@ -80,7 +84,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod {
         );
     }; // ??? should we be looking at addLootFromPool instead? but it's protected https://dev.sp-tarkov.com/SPT/Server/src/branch/3.9.x-DEV/project/src/generators/BotLootGenerator.ts
 
-    public postDBLoad(container: DependencyContainer): void {
+    public postDBLoad(container: DependencyContainer): void 
+    {
         const customItemService =
             container.resolve<CustomItemService>("CustomItemService");
         const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
@@ -92,6 +97,12 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod {
 
 
         const therapist: ITrader = tables.traders[Traders.THERAPIST];
+
+        logger.logWithColor(
+            "Custom First Aid Kits: This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!",
+            LogTextColor.BLACK,
+            LogBackgroundColor.YELLOW
+        );
 
         ItemFactory.init(container);
         const itemFactory = new ItemFactory(cfakCfg.replaceBaseItems);
