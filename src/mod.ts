@@ -33,7 +33,6 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
     private logger: Logger;
     private cfakCfg: CfakConfig;
     private replaceBaseItems: boolean;
-    private originalLootGenerator: BotLootGenerator["generateLoot"];
 
     public preSptLoad(container: DependencyContainer): void 
     {
@@ -80,9 +79,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             BotLootGenerator,
             (_token, botLootGen: BotLootGenerator) => 
             {
-                this.originalLootGenerator = botLootGen.generateLoot;
                 botLootGen.generateLoot = (...args): void => customBotLootGenerator.generateLoot(...args);
-            }
+            }, { frequency: "Always" }
         );
         this.logger.log("Updated loot generator to include custom containers!");
     }
