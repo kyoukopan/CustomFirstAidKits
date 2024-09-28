@@ -58,14 +58,18 @@ export default class ItemFactory
     /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
     public createItems(): void 
     {
+        this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
         for (const originalId in itemCfg) 
         {
             const details = itemCfg[originalId as ItemTpl];
             const [succ, ogItem] = ItemFactory.itemHelper.getItem(originalId);
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
+
+            this.logger.debug(`Current item: ${details.idForNewItem}`, true);
+
             if (!succ) 
             {
-                this.logger.log(`Unable to find original item ${originalId} in item DB`, LoggerLvl.ERROR);
+                this.logger.error(`Unable to find original item ${originalId} in item DB`);
             }
 
             const [siccSucc, sicc] = ItemFactory.itemHelper.getItem(
@@ -73,7 +77,7 @@ export default class ItemFactory
             );
             if (!siccSucc) 
             {
-                this.logger.log("Couldn't get original SICC for cloning", LoggerLvl.ERROR);
+                this.logger.error("Couldn't get original SICC for cloning");
             }
 
             const newItem = ItemFactory.cloner.clone(sicc);
@@ -117,13 +121,20 @@ export default class ItemFactory
                 });
             }
 
+            this.logger.debug("Item template:");
+            this.logger.debug(JSON.stringify(newItem, null, 4));
+
             // For the following, if replaceOriginal is false, we add new entries
             // Otherwise, we modify the existing item since idToUse is the original item's ID
 
             // Item DB
             ItemFactory.itemsTable[idToUse] = newItem;
+            this.logger.debug("Item [added to/replaced in] item DB result:");
+            this.logger.debug(JSON.stringify(ItemFactory.itemsTable[idToUse], null, 4));
             // Flea prices
             ItemFactory.dbService.getPrices()[idToUse] = details.price;
+            this.logger.debug("Item [added to/replaced in] flea prices DB result:");
+            this.logger.debug(JSON.stringify(ItemFactory.dbService.getPrices()[idToUse], null, 4));
 
             if (this.replaceOriginal) 
             {
@@ -132,6 +143,8 @@ export default class ItemFactory
                     (item) => item.Id === idToUse
                 ); // Find the item in the handbook item array
                 ItemFactory.handbook.Items[hbIdx].Price = details.price; // Id and Parent can stay the same, just change price
+                this.logger.debug("Item replaced in handbook result:");
+                this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[hbIdx], null, 4));
             }
             else 
             {
@@ -141,12 +154,18 @@ export default class ItemFactory
                     ParentId: handbookMedkitsId,
                     Price: details.price
                 });
+                this.logger.debug("Item added to handbook result:");
+                this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
 
                 // Add to locales (not needed if replacing existing)
                 const locale = ItemFactory.dbService.getLocales().global.en;
                 locale[`${idToUse} Name`] = details.locale.name;
                 locale[`${idToUse} ShortName`] = details.locale.shortName;
                 locale[`${idToUse} Description`] = details.locale.description;
+                this.logger.debug("Item added to locales result:");
+                this.logger.debug(`Name: ${JSON.stringify(locale[`${idToUse} Name`], null, 4)}`);
+                this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
+                this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
             }
         }
     }
@@ -154,11 +173,13 @@ export default class ItemFactory
     /** Adds/updates barter schemes with filled first aid kits */
     public barterChanges(): void 
     {
+        this.logger.debug(`Updating barter schemes - replaceBaseItems = ${this.replaceOriginal}`, true);
         const traders = ItemFactory.dbService.getTraders();
         for (const originalId in itemCfg) 
         {
             const details = itemCfg[originalId as ItemTpl];
             const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
+            this.logger.debug(`Current item: ${details.idForNewItem}`, true);
 
             const gridSlotCounts = gridHelper.getGridSlotCounts();
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
@@ -167,6 +188,7 @@ export default class ItemFactory
             for (const trader of Object.values(traders)) 
             {
                 if (trader.assort?.items == null) continue;
+                this.logger.debug(`Current trader: ${trader.base.nickname}`, true);
 
                 // Find all barter IDs that have this item as a product or make our own
                 const barterIds: string[] = [];
@@ -186,7 +208,7 @@ export default class ItemFactory
                     if (trader.base._id === details.soldBy) 
                     {
                         const barterBuyId = this.getBarterId(idToUse, "Buy", 0);
-                        trader.assort?.items?.push({
+                        let newLenDebug = trader.assort?.items?.push({
                             _id: barterBuyId,
                             _tpl: idToUse,
                             parentId: "hideout",
@@ -198,11 +220,12 @@ export default class ItemFactory
                                 BuyRestrictionCurrent: 0
                             }
                         });
+                        this.logger.debug(`Added to assort items: ${trader.assort?.items[newLenDebug - 1]}`);
                         barterIds.push(barterBuyId);
                         if (details.customBarter != null) 
                         {
                             const barterBarterId = this.getBarterId(idToUse, "Barter", 0);
-                            trader.assort?.items?.push({
+                            newLenDebug = trader.assort?.items?.push({
                                 _id: barterBarterId,
                                 _tpl: idToUse,
                                 parentId: "hideout",
@@ -215,11 +238,13 @@ export default class ItemFactory
                                 }
                             });
                             barterIds.push(barterBarterId);
+                            this.logger.debug(`Added to assort items: ${trader.assort?.items[newLenDebug - 1]}`);
                         }
                     }
                 }
                 for (const barterId of barterIds) 
                 {
+                    this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
                     if (!this.replaceOriginal) 
                     {
                         // Add barter details
@@ -230,8 +255,10 @@ export default class ItemFactory
                                 count: details.bundlePrice
                             }]
                         ])];
+                        this.logger.debug(`Added barter scheme: ${trader.assort.barter_scheme[barterId]}`);
                         // Add loyalty level info
                         trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
+                        this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
                     }
 
                     // Add items to slots
@@ -239,9 +266,12 @@ export default class ItemFactory
                     {
                         let currGrid = 0; // Can have multiple grids in each kit
                         let currSlotInGrid = 0; // Tracks which slots we have filled so we don't go out of bounds
+                        const startDebugLen = trader.assort?.items?.length;
+                        let endDebugLen = trader.assort?.items?.length;
                         for (const currItem in details.bundled) 
                         {
-                            trader.assort?.items?.push({
+                            this.logger.debug(`Current grid index: ${currGrid} Current slot in grid index: ${currSlotInGrid}`);
+                            endDebugLen = trader.assort?.items?.push({
                                 _id: `${barterId}Item${currItem}`,
                                 _tpl: details.bundled[currItem],
                                 parentId: barterId,
@@ -257,10 +287,11 @@ export default class ItemFactory
                                 currSlotInGrid++;
                             }
                         }
+                        this.logger.debug(`Added bundled items to trader inventory: ${JSON.stringify(trader.assort?.items?.slice(startDebugLen - 1, endDebugLen), null, 4)}`);
                     }
                     catch 
                     {
-                        this.logger.log(`Error adding items into barter for barter ID ${barterId}`, LoggerLvl.ERROR);
+                        this.logger.error(`Error adding items into barter for barter ID ${barterId}`);
                     }
                 }
             }

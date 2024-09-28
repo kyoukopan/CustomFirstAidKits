@@ -76,7 +76,6 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             this.logger
         )
         
-
         container.afterResolution(
             BotLootGenerator,
             (_token, botLootGen: BotLootGenerator) => 
@@ -92,6 +91,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
     {
 
         this.logger.log("This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!", LoggerLvl.HEADER);
+        this.logger.log(`Config set to ${this.replaceBaseItems ? "replace existing items" : "add new items and preserve existing first aid kits"}`);
+        if (!this.replaceBaseItems) this.logger.log("If you plan to uninstall this mod or change replaceBaseItems to true, make sure to delete the custom mod items from your profile with Profile Editor!", LoggerLvl.HEADER);
 
         ItemFactory.init(container);
         const itemFactory = new ItemFactory(this.replaceBaseItems, this.logger);

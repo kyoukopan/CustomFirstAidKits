@@ -21,7 +21,6 @@ import type { ConfigServer } from "@spt/servers/ConfigServer";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type CfakConfig from "./types/CfakConfig";
 import itemCfg, { type ItemCfgInfo } from "./itemCfg";
-import type { ItemTpl } from "@spt/models/enums/ItemTpl";
 import GridHelper from "./GridHelper";
 import type Logger from "./Logger";
 
@@ -72,7 +71,8 @@ export default class CustomBotLootGenerator extends BotLootGenerator
     public generateLoot: BotLootGenerator["generateLoot"] = 
         (sessionId: string, botJsonTemplate: IBotType, isPmc: boolean, botRole: string, botInventory: Inventory, botLevel: number) =>
         {
-
+            this.logger.debug(`Custom BotLootGenerator.generateLoot() called for ${botRole} - replaceBaseItems = ${this.replaceBaseItems}`, true);
+            super.generateLoot(sessionId, botJsonTemplate, isPmc, botRole, botInventory, botLevel);
         }
 
     /**
@@ -100,6 +100,7 @@ export default class CustomBotLootGenerator extends BotLootGenerator
             const newRootItemId = this.hashUtil.generate();
             const items = this.addMedkitLoot(newRootItemId, itemTpl as OriginalMedkitItemTpl | CustomMedkitItemTpl);
             itemToAddChildrenTo.push(...items);
+            this.logger.debug(`itemToAddChildrenTo after pushing stuff ${JSON.stringify(itemToAddChildrenTo, null, 4)}`);
         }
     }
 
@@ -121,7 +122,14 @@ export default class CustomBotLootGenerator extends BotLootGenerator
         const result: Item[] = [];
         const medkitDetails: ItemCfgInfo = this.replaceBaseItems ? itemCfg[itemTpl] : itemCfg[customToOriginalMap[itemTpl]]; // If not replaceBaseItems, itemTpl passed in is the custom ID which we must reverse lookup since itemCfg is indexed by original Tpl id
         const gridHelper = new GridHelper(medkitDetails, this.hashUtil, this.myLogger);
-        gridHelper.addItemsToGridSlots(medkitId, result);
+        this.logger.debug(`Adding medkit loot to ${medkitDetails.idForNewItem}`);
+        const succ = gridHelper.addItemsToGridSlots(medkitId, result);
+        this.logger.debug(`Item array after adding stuffs: ${JSON.stringify(result, null, 4)}`);
+        if (!succ) 
+        {
+            this.logger.error(`Unable to add medkit loot to ${itemTpl} (${medkitDetails.idForNewItem})`);
+            return [];
+        }
 
         return result;
     }

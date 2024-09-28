@@ -8,7 +8,8 @@ export enum LoggerLvl
     INFO = 0,
     DEBUG = 1,
     ERROR = 2,
-    HEADER = 3
+    HEADER = 3,
+    DEBUG_HEADER = 4
 }
 
 const prefix = "Custom First Aid Kits: ";
@@ -42,6 +43,19 @@ export default class Logger
                 break;
             case LoggerLvl.ERROR:
                 this.sptLogger.error(prefix + data);
+                break;
+            case LoggerLvl.DEBUG_HEADER:
+                this.sptLogger.debug(`${prefix}===== ${data} =====`);
         }
+    }
+
+    public debug(data: Parameters<ILogger["log"]>[0], header = false): void
+    {
+        this.log(data, header ? LoggerLvl.DEBUG_HEADER : LoggerLvl.DEBUG);
+    }
+
+    public error(data: Parameters<ILogger["log"]>[0]): void
+    {
+        this.log(data, LoggerLvl.ERROR);
     }
 }
