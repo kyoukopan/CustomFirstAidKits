@@ -45,7 +45,7 @@ export default class Logger
                 this.sptLogger.error(prefix + data);
                 break;
             case LoggerLvl.DEBUG_HEADER:
-                this.sptLogger.debug(`${prefix}===== ${data} =====`);
+                this.sptLogger.debug(`\n${prefix}================================ ${data} ================================\n`);
         }
     }
 
