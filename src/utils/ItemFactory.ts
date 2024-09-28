@@ -7,13 +7,21 @@ import { DatabaseService } from "@spt/services/DatabaseService";
 import { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type { DependencyContainer } from "tsyringe";
-import itemCfg from "./itemCfg";
+import itemCfg, { type ItemCfgInfo } from "./itemCfg";
 import GridHelper from "./GridHelper";
 import { HashUtil } from "@spt/utils/HashUtil";
 import type Logger from "./Logger";
 import { LoggerLvl } from "./Logger";
+import type { IBarterScheme, ITrader } from "@spt/models/eft/common/tables/ITrader";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
+
+enum BarterSchemeType 
+{
+    BUY = "Buy",
+    BARTER = "Barter",
+    EMPTY = "Empty"
+}
 
 export default class ItemFactory 
 {
@@ -177,11 +185,10 @@ export default class ItemFactory
         const traders = ItemFactory.dbService.getTraders();
         for (const originalId in itemCfg) 
         {
-            const details = itemCfg[originalId as ItemTpl];
+            const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
             const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
             this.logger.debug(`Current item: ${details.idForNewItem}`, true);
 
-            const gridSlotCounts = gridHelper.getGridSlotCounts();
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
 
             // Add contents to all existing barters/purchases
@@ -190,10 +197,12 @@ export default class ItemFactory
                 if (trader.assort?.items == null) continue;
                 this.logger.debug(`Current trader: ${trader.base.nickname}`, true);
 
-                // Find all barter IDs that have this item as a product or make our own
+                /** List of barter schemes we need to add */
                 const barterIds: string[] = [];
+
                 if (this.replaceOriginal) 
                 {
+                    // Find all existing barter schemes for this item
                     for (const item of Object.values(trader.assort?.items))
                     {
                         if (item._tpl === idToUse) 
@@ -202,111 +211,121 @@ export default class ItemFactory
                         }
                     }
                 }
-                else 
+                if (trader.base._id === details.soldBy) 
                 {
-                    // Add a new base item for barters
-                    if (trader.base._id === details.soldBy) 
+                    // Add the empty container to barters (if specified)
+                    if (details.traderSellsEmptyToo)
                     {
-                        const barterBuyId = this.getBarterId(idToUse, "Buy", 0);
-                        let newLenDebug = trader.assort?.items?.push({
-                            _id: barterBuyId,
-                            _tpl: idToUse,
-                            parentId: "hideout",
-                            slotId: "hideout",
-                            upd: {
-                                UnlimitedCount: true,
-                                StackObjectsCount: 999999,
-                                BuyRestrictionMax: 5,
-                                BuyRestrictionCurrent: 0
-                            }
-                        });
-                        this.logger.debug(`Added to assort items: ${trader.assort?.items[newLenDebug - 1]}`);
+                        const barterEmptyId = this.getBarterId(idToUse, BarterSchemeType.EMPTY, 0);
+                        const newIdxDebug = this.addBaseContainerToAssortItems(barterEmptyId, idToUse, trader);
+                        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
+                        barterIds.push(barterEmptyId);
+                    }
+
+                    if (!this.replaceOriginal)
+                    {
+                        // Add custom item as a new barter
+                        // Buy with money
+                        const barterBuyId = this.getBarterId(idToUse, BarterSchemeType.BUY, 0);
+                        let newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
+                        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
                         barterIds.push(barterBuyId);
+                        // Buy with barter items
                         if (details.customBarter != null) 
                         {
-                            const barterBarterId = this.getBarterId(idToUse, "Barter", 0);
-                            newLenDebug = trader.assort?.items?.push({
-                                _id: barterBarterId,
-                                _tpl: idToUse,
-                                parentId: "hideout",
-                                slotId: "hideout",
-                                upd: {
-                                    UnlimitedCount: true,
-                                    StackObjectsCount: 999999,
-                                    BuyRestrictionMax: 5,
-                                    BuyRestrictionCurrent: 0
-                                }
-                            });
+                            const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
+                            newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
                             barterIds.push(barterBarterId);
-                            this.logger.debug(`Added to assort items: ${trader.assort?.items[newLenDebug - 1]}`);
+                            this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
                         }
                     }
                 }
+
+                // Add items to and add barter scheme for everything
                 for (const barterId of barterIds) 
                 {
-                    this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
-                    if (!this.replaceOriginal) 
+                    const bType = this.getBarterSchemeDetails(barterId);
+
+                    // Add items to slots, obv empty buy scheme doesn't come with items...
+                    if (bType !== BarterSchemeType.EMPTY) 
                     {
-                        // Add barter details
-                        const bType = this.getBarterSchemeDetails(barterId);
-                        trader.assort.barter_scheme[barterId] = [...(bType === "Barter" ? details.customBarter : [
-                            [{
-                                _tpl: details.currency,
-                                count: details.bundlePrice
-                            }]
-                        ])];
-                        this.logger.debug(`Added barter scheme: ${trader.assort.barter_scheme[barterId]}`);
-                        // Add loyalty level info
-                        trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
-                        this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
+                        gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
                     }
 
-                    // Add items to slots
-                    try 
+                    // Don't modify/add original buy/barter scheme info
+                    if (this.replaceOriginal && bType !== BarterSchemeType.EMPTY) continue;
+                    
+                    this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
+
+                    // Add barter details
+                    let barterScheme: IBarterScheme[][];
+                    switch (bType)
                     {
-                        let currGrid = 0; // Can have multiple grids in each kit
-                        let currSlotInGrid = 0; // Tracks which slots we have filled so we don't go out of bounds
-                        const startDebugLen = trader.assort?.items?.length;
-                        let endDebugLen = trader.assort?.items?.length;
-                        for (const currItem in details.bundled) 
-                        {
-                            this.logger.debug(`Current grid index: ${currGrid} Current slot in grid index: ${currSlotInGrid}`);
-                            endDebugLen = trader.assort?.items?.push({
-                                _id: `${barterId}Item${currItem}`,
-                                _tpl: details.bundled[currItem],
-                                parentId: barterId,
-                                slotId: gridHelper.getGridNameId(currGrid)
-                            });
-                            if (currSlotInGrid === gridSlotCounts[currGrid] - 1) 
-                            {
-                                currGrid++;
-                                currSlotInGrid = 0;
-                            }
-                            else 
-                            {
-                                currSlotInGrid++;
-                            }
-                        }
-                        this.logger.debug(`Added bundled items to trader inventory: ${JSON.stringify(trader.assort?.items?.slice(startDebugLen - 1, endDebugLen), null, 4)}`);
+                        case BarterSchemeType.BARTER:
+                            barterScheme = details.customBarter;
+                            break;
+                        case BarterSchemeType.BUY:
+                            barterScheme = [
+                                [{
+                                    _tpl: details.currency,
+                                    count: details.bundlePrice
+                                }]
+                            ];
+                            break;
+                        case BarterSchemeType.EMPTY:
+                            barterScheme = [
+                                [{
+                                    _tpl: details.currency,
+                                    count: details.price
+                                }]
+                            ];
                     }
-                    catch 
-                    {
-                        this.logger.error(`Error adding items into barter for barter ID ${barterId}`);
-                    }
+                    trader.assort.barter_scheme[barterId] = barterScheme;
+                    this.logger.debug(`Added barter scheme: ${JSON.stringify(trader.assort.barter_scheme[barterId], null, 4)}`);
+                    // Add loyalty level info
+                    trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
+                    this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
                 }
             }
         }
     }
 
-    /** Unique ID for each barter */
-    private getBarterId(id: string, type: "Buy" | "Barter", idx: number) 
+    /**
+     * @returns the index of the item we just pushed
+     */
+    private addBaseContainerToAssortItems(
+        /** The ID that identifies this specific barter entry (can have multiple for the same item type) */
+        barterId: string, 
+        /** The ID that identifies this item template */
+        itemTplId: string, 
+        /** The trader's DB */
+        trader: ITrader)
     {
-        return `${id}99${type}99${idx}`;
+        return trader.assort?.items?.push(
+            {
+                _id: barterId,
+                _tpl: itemTplId,
+                parentId: "hideout",
+                slotId: "hideout",
+                upd: {
+                    UnlimitedCount: true,
+                    StackObjectsCount: 999999,
+                    BuyRestrictionMax: 5,
+                    BuyRestrictionCurrent: 0
+                }
+            }
+        ) - 1;
     }
 
-    private getBarterSchemeDetails(id: string): "Buy" | "Barter"
+    /** Unique ID for each barter */
+    private getBarterId(id: string, type: BarterSchemeType, idx: number) 
     {
-        const split = id.split("99");
-        return split[1] as "Buy" | "Barter";
+        return `${id}69${type}69${idx}`;
+    }
+
+    private getBarterSchemeDetails(id: string): BarterSchemeType
+    {
+        const split = id.split("69");
+        return split[1] as BarterSchemeType;
     }
 }

@@ -27,8 +27,10 @@ export interface ItemCfgInfo
     soldBy: Traders;
     loyalLevel: {
         buy: number,
-        barter?: number
-    }
+        barter?: number,
+        empty?: number
+    };
+    traderSellsEmptyToo?: boolean;
 }
 
 export type ItemCfg = Partial<Record<OriginalItemTpl, ItemCfgInfo>>;
@@ -177,12 +179,14 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 3,
-            barter: 2
-        }
+            barter: 2,
+            empty: 1
+        },
+        traderSellsEmptyToo: true
     },
     [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: CustomMedkitItemTpl.AFAK_FIRST_AID_KIT,
-        price: 22000,
+        price: 169,
         grids: [
             {
                 cellsV: 2,
@@ -208,8 +212,10 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.PEACEKEEPER,
         loyalLevel: {
             buy: 4,
-            barter: 2
-        }
+            barter: 2,
+            empty: 2
+        },
+        traderSellsEmptyToo: true
     },
     [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: {
         idForNewItem: CustomMedkitItemTpl.GRIZZLY_FIRST_AID_KIT,
