@@ -1,4 +1,11 @@
 {
+  "replaceBaseItems description": [
+    "If true, the original medkits will be replaced with the custom ones.",
+    "If false, the custom medkits will be added as separate items for purchase.",
+    "IMPORTANT! If this is set to false, you must remove the custom items from your inventory before uninstalling!"
+  ],
   "replaceBaseItems": true,
-  "debug": true
+
+  "debug description": ["Adds additional logging to the server for debugging."],
+  "debug": false
 }
