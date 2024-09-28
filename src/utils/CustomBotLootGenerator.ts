@@ -504,8 +504,7 @@ export default class CustomBotLootGenerator extends BotLootGenerator
         if (this.replaceBaseItems ? this.isOriginalMedkitItemTpl(itemTpl) : this.isCustomMedkitItemTpl(itemTpl)) 
         {
             // If replace, itemTpl is OriginalMedkitItemTl, if not, itemTpl is CustomMedkitItemTpl
-            const newRootItemId = this.hashUtil.generate();
-            const items = this.addMedkitLoot(newRootItemId, itemTpl as OriginalMedkitItemTpl | CustomMedkitItemTpl);
+            const items = this.addMedkitLoot(itemToAddChildrenTo[0]._id, itemTpl as OriginalMedkitItemTpl | CustomMedkitItemTpl);
             itemToAddChildrenTo.push(...items);
             this.myLogger.debug(`itemToAddChildrenTo after pushing stuff ${JSON.stringify(itemToAddChildrenTo, null, 4)}`);
         }
