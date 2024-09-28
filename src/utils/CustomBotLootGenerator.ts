@@ -92,7 +92,6 @@ export default class CustomBotLootGenerator extends BotLootGenerator
         botRole: string
     ): void 
     {
-        this.myLogger.debug("Entered custom addRequiredChildItemsToParent");
         super.addRequiredChildItemsToParent(itemToAddTemplate, itemToAddChildrenTo, isPmc, botRole);
         
         const itemTpl = itemToAddTemplate._id;

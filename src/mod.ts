@@ -1,32 +1,28 @@
 import type { DependencyContainer } from "tsyringe";
 
+import type { BotLootGenerator } from "@spt/generators/BotLootGenerator";
+import { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
+import { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
+import { BotHelper } from "@spt/helpers/BotHelper";
+import { HandbookHelper } from "@spt/helpers/HandbookHelper";
+import { InventoryHelper } from "@spt/helpers/InventoryHelper";
+import { ItemHelper } from "@spt/helpers/ItemHelper";
+import { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
+import type { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import { LogTextColor } from "@spt/models/spt/logging/LogTextColor";
-import { LogBackgroundColor } from "@spt/models/spt/logging/LogBackgroundColor";
-import type { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
-import { JsonUtil } from "@spt/utils/JsonUtil";
-
-import * as _cfakCfg from "../config/config.json";
-import { BotLootGenerator } from "@spt/generators/BotLootGenerator";
-import ItemFactory from "./utils/ItemFactory";
-import CustomBotLootGenerator from "./utils/CustomBotLootGenerator";
+import { ConfigServer } from "@spt/servers/ConfigServer";
+import { BotLootCacheService } from "@spt/services/BotLootCacheService";
+import { DatabaseService } from "@spt/services/DatabaseService";
+import { LocalisationService } from "@spt/services/LocalisationService";
 import { HashUtil } from "@spt/utils/HashUtil";
 import { RandomUtil } from "@spt/utils/RandomUtil";
-import { ItemHelper } from "@spt/helpers/ItemHelper";
-import { InventoryHelper } from "@spt/helpers/InventoryHelper";
-import { DatabaseService } from "@spt/services/DatabaseService";
-import { HandbookHelper } from "@spt/helpers/HandbookHelper";
-import { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
-import { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
-import { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
-import { BotHelper } from "@spt/helpers/BotHelper";
-import { BotLootCacheService } from "@spt/services/BotLootCacheService";
-import { LocalisationService } from "@spt/services/LocalisationService";
-import { ConfigServer } from "@spt/servers/ConfigServer";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
-import type CfakConfig from "./utils/types/CfakConfig";
+import * as _cfakCfg from "../config/config.json";
+import CustomBotLootGenerator from "./utils/CustomBotLootGenerator";
+import ItemFactory from "./utils/ItemFactory";
 import Logger, { LoggerLvl } from "./utils/Logger";
+import type CfakConfig from "./utils/types/CfakConfig";
 
 class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
 {
