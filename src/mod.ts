@@ -75,8 +75,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             this.logger
         )
         
-        container.afterResolution(
-            BotLootGenerator,
+        container.afterResolution<BotLootGenerator>(
+            "BotLootGenerator",
             (_token, botLootGen: BotLootGenerator) => 
             {
                 botLootGen.generateLoot = (...args): void => customBotLootGenerator.generateLoot(...args);
