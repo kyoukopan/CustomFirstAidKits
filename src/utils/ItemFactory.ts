@@ -71,7 +71,7 @@ export default class ItemFactory
         this.logger = logger;
     }
 
-    /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
+    /** Creates our custom first aid kits and adds them to barters */
     public createMedkits(): void 
     {
         const traders = ItemFactory.dbService.getTraders();
@@ -84,8 +84,85 @@ export default class ItemFactory
         }
     }
 
-    /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
-    private createItem(details: ItemCfgInfo, replaceOriginal: boolean, originalTplToCopy?: ItemTpl): void 
+    /** Creates our custom whole blood bag and adds it to barters */
+    public createBloodbag(): void 
+    {
+        const id = CustomNewItemTpl.WHOLE_BLOOD;
+        const details = itemCfg[id];
+        this.createItem(details);
+
+        const wholeBloodItem = ItemFactory.itemsTable[id];
+
+        // Add SPT Realism stuff
+        if (wholeBloodItem._props.ConflictingItems[0] === "SPTRM") // Cloned CAR kit already has SPT Realism fields, just change HP restore
+        {
+            wholeBloodItem._props.ConflictingItems[6] = "60"; // HP restore amount
+        }
+        else 
+        {
+            wholeBloodItem._props.ConflictingItems.splice(0, 0, "SPTRM");
+            wholeBloodItem._props.ConflictingItems.splice(1, 0, "medkit");
+            wholeBloodItem._props.ConflictingItems.splice(2, 0, "none");
+            wholeBloodItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
+            wholeBloodItem._props.ConflictingItems.splice(4, 0, "true");
+            wholeBloodItem._props.ConflictingItems.splice(5, 0, "");
+            wholeBloodItem._props.ConflictingItems.splice(6, 0, "60"); // HP restore amount
+            wholeBloodItem._props.ConflictingItems.splice(7, 0, "");
+            wholeBloodItem._props.ConflictingItems.splice(8, 0, "");
+        }
+
+        this.logger.debug("Updated whole blood with SPTRM info:");
+        this.logger.debug(JSON.stringify(wholeBloodItem, null, 4));
+
+
+        const traders = ItemFactory.dbService.getTraders();
+        this.barterChanges(traders, details);
+        
+        // Add to crafting 
+        const craft: IHideoutProduction = {
+            _id: "wholebloodcraft",
+            areaType: HideoutAreas.MEDSTATION,
+            requirements: [
+                {
+                    areaType: HideoutAreas.MEDSTATION,
+                    requiredLevel: 1,
+                    type: "Area"
+                },
+                {
+                    templateId: ItemTpl.BARTER_MEDICAL_BLOODSET,
+                    count: 1,
+                    isFunctional: false,
+                    isEncoded: false,
+                    type: "Item"
+                },
+                {
+                    templateId: ItemTpl.MEDICAL_ESMARCH_TOURNIQUET,
+                    type: "Tool"
+                }
+            ],
+            productionTime: 1000,
+            needFuelForAllProductionTime: false,
+            locked: false,
+            endProduct: "wholeblood",
+            continuous: false,
+            count: 2,
+            productionLimitCount: 0,
+            isEncoded: false
+        }
+        ItemFactory.dbService.getHideout().production.push(craft);
+    }
+
+
+    /**
+     * Adds item to barters
+     */
+    private createItem(details): void 
+    /**
+    * @param originalTplToCopy If using `replaceOriginal`, this is required
+    */
+    private createItem(details, replaceOriginal, originalTplToCopy): void 
+    /** Creates our custom item adds/replaces it in DB, handbook, etc */
+    private createItem(details: ItemCfgInfo, replaceOriginal?: boolean, originalTplToCopy?: ItemTpl): void 
     {
         let ogItem: ITemplateItem;
         if (originalTplToCopy)
@@ -216,138 +293,15 @@ export default class ItemFactory
         this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist]);
     }
 
-    public createBloodbag(): void 
-    {
-        const id = CustomNewItemTpl.WHOLE_BLOOD;
-        const details = itemCfg[id];
-        this.createItem(details, false);
-        /*
-        const details = {
-            id: "wholeblood",
-            price: 12000,
-            weight: 1,
-            locale: {
-                name: "Whole Blood",
-                shortName: "WB",
-                description:
-                          "Whole blood for transfusion."
-            
-            },
-            loyalLevel: {
-                buy: 1
-            }
-        };
-        const id = details.id;
-
-        const [succ, baseItem] = ItemFactory.itemHelper.getItem(
-            ItemTpl.MEDKIT_CAR_FIRST_AID_KIT
-        );
-        if (!succ) 
-        {
-            this.logger.error("Couldn't get original item for cloning");
-        }
-
-        const newItem = ItemFactory.cloner.clone(baseItem);
-        newItem._id = id;
-        newItem._parent = BaseClasses.MEDICAL;
-        newItem._name = details.id;
-        newItem._props = {
-            ...newItem._props,
-            Prefab: {
-                path: "bloodbag.bundle",
-                rcid: ""
-            },
-            Weight: details.weight,
-            Width: 1,
-            Height: 2,
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            effects_damage: {},
-            // eslint-disable-next-line @typescript-eslint/naming-convention
-            effects_health: {},
-            medUseTime: 6,
-            MaxHpResource: 6,
-            hpResourceRate: 1,
-            CanSellOnRagfair: false,
-            CanRequireOnRagfair: false,
-            ItemSound: "food_bottle"
-        };
-        // biome-ignore lint/performance/noDelete: <explanation>
-        delete newItem._props.Grids;
-        */
-        
-        const wholeBloodItem = ItemFactory.itemsTable[id];
-
-        // Add SPT Realism stuff
-        if (wholeBloodItem._props.ConflictingItems[0] === "SPTRM") // Cloned CAR kit already has SPT Realism fields, just change HP restore
-        {
-            wholeBloodItem._props.ConflictingItems[6] = "60"; // HP restore amount
-        }
-        else 
-        {
-            wholeBloodItem._props.ConflictingItems.splice(0, 0, "SPTRM");
-            wholeBloodItem._props.ConflictingItems.splice(1, 0, "medkit");
-            wholeBloodItem._props.ConflictingItems.splice(2, 0, "none");
-            wholeBloodItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
-            wholeBloodItem._props.ConflictingItems.splice(4, 0, "true");
-            wholeBloodItem._props.ConflictingItems.splice(5, 0, "");
-            wholeBloodItem._props.ConflictingItems.splice(6, 0, "60"); // HP restore amount
-            wholeBloodItem._props.ConflictingItems.splice(7, 0, "");
-            wholeBloodItem._props.ConflictingItems.splice(8, 0, "");
-        }
-
-        this.logger.debug("Updated whole blood with SPTRM info:");
-        this.logger.debug(JSON.stringify(wholeBloodItem, null, 4));
-
-
-        const traders = ItemFactory.dbService.getTraders();
-        this.barterChanges(traders, details, false);
-        
-        // Add to crafting 
-        const craft: IHideoutProduction = {
-            _id: "wholebloodcraft",
-            areaType: HideoutAreas.MEDSTATION,
-            requirements: [
-                {
-                    areaType: HideoutAreas.MEDSTATION,
-                    requiredLevel: 1,
-                    type: "Area"
-                },
-                {
-                    templateId: ItemTpl.BARTER_MEDICAL_BLOODSET,
-                    count: 1,
-                    isFunctional: false,
-                    isEncoded: false,
-                    type: "Item"
-                },
-                {
-                    templateId: ItemTpl.MEDICAL_ESMARCH_TOURNIQUET,
-                    type: "Tool"
-                }
-            ],
-            productionTime: 1000,
-            needFuelForAllProductionTime: false,
-            locked: false,
-            endProduct: "wholeblood",
-            continuous: false,
-            count: 2,
-            productionLimitCount: 0,
-            isEncoded: false
-        }
-        ItemFactory.dbService.getHideout().production.push(craft);
-    }
-
-    // /** Adds/updates barter schemes with filled first aid kits */
-    // public medkitBarterChanges(): void 
-    // {
-    //     const traders = ItemFactory.dbService.getTraders();
-    //     for (const originalId in itemCfg) 
-    //     {
-    //         const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
-    //         this.barterChanges(traders, details, this.replaceOriginal, originalId as ItemTpl);
-    //     }
-    // }
-
-    private barterChanges(traders: Record<string, ITrader>, details: ItemCfgInfo, replaceOriginal: boolean, originalTpl?: ItemTpl): void 
+    /**
+     * Adds item to barters
+     */
+    private barterChanges(traders, details): void 
+    /**
+     * @param originalTpl If using `replaceOriginal`, this is required
+     */
+    private barterChanges(traders, details, replaceOriginal, originalTpl): void 
+    private barterChanges(traders: Record<string, ITrader>, details: ItemCfgInfo, replaceOriginal?: boolean, originalTpl?: ItemTpl): void 
     {
         this.logger.debug(`Updating barter schemes - replaceBaseItems = ${this.replaceOriginal}`, true);
 
