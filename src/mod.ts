@@ -89,7 +89,7 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
         if (!this.replaceBaseItems) this.logger.log("If you plan to uninstall this mod or change replaceBaseItems to true, make sure to delete the custom mod items from your profile with Profile Editor!", LoggerLvl.HEADER);
 
         ItemFactory.init(container);
-        const itemFactory = new ItemFactory(this.replaceBaseItems, this.logger);
+        const itemFactory = new ItemFactory(this.cfakCfg, this.logger);
         itemFactory.createItems();
         itemFactory.createBloodbag();
         this.logger.log("Items added!");

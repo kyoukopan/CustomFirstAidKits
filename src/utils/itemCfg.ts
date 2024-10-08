@@ -31,6 +31,7 @@ export interface ItemCfgInfo
         empty?: number
     };
     traderSellsEmptyToo?: boolean;
+    allowedParentContainers: ItemTpl[];
 }
 
 export type ItemCfg = Partial<Record<OriginalItemTpl, ItemCfgInfo>>;
@@ -69,6 +70,8 @@ const misc = [
 
 const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...injectors, ...misc];
 
+const medicalContainers = [ItemTpl.CONTAINER_MEDICINE_CASE, ItemTpl.BACKPACK_LBT2670_SLIM_FIELD_MED_PACK_BLACK];
+
 const itemCfg: ItemCfg = {
     [ItemTpl.MEDKIT_CAR_FIRST_AID_KIT]: {
         idForNewItem: CustomMedkitItemTpl.CAR_FIRST_AID_KIT,
@@ -98,7 +101,8 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 1
-        }
+        },
+        allowedParentContainers: medicalContainers
     },
     [ItemTpl.MEDKIT_SALEWA_FIRST_AID_KIT]: {
         idForNewItem: CustomMedkitItemTpl.SALEWA_FIRST_AID_KIT,
@@ -141,7 +145,8 @@ const itemCfg: ItemCfg = {
         loyalLevel: {
             buy: 2
             // barter: 2
-        }
+        },
+        allowedParentContainers: medicalContainers
     },
     [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: CustomMedkitItemTpl.IFAK_FIST_AID_KIT,
@@ -182,7 +187,8 @@ const itemCfg: ItemCfg = {
             barter: 2,
             empty: 1
         },
-        traderSellsEmptyToo: true
+        traderSellsEmptyToo: true,
+        allowedParentContainers: medicalContainers
     },
     [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
         idForNewItem: CustomMedkitItemTpl.AFAK_FIRST_AID_KIT,
@@ -215,7 +221,8 @@ const itemCfg: ItemCfg = {
             barter: 2,
             empty: 2
         },
-        traderSellsEmptyToo: true
+        traderSellsEmptyToo: true,
+        allowedParentContainers: medicalContainers
     },
     [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: {
         idForNewItem: CustomMedkitItemTpl.GRIZZLY_FIRST_AID_KIT,
@@ -254,7 +261,8 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 4
-        }
+        },
+        allowedParentContainers: medicalContainers
     }
 }
 export default itemCfg;

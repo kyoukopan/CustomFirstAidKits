@@ -17,6 +17,7 @@ import { Traders } from "@spt/models/enums/Traders";
 import { Money } from "@spt/models/enums/Money";
 import { HideoutAreas } from "@spt/models/enums/HideoutAreas";
 import type { IHideoutProduction } from "@spt/models/eft/hideout/IHideoutProduction";
+import type CfakConfig from "./types/CfakConfig";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
@@ -40,7 +41,9 @@ export default class ItemFactory
     static itemsTable: ReturnType<DatabaseService["getItems"]>;
     static handbook: ReturnType<DatabaseService["getHandbook"]>;
 
+    // Config fields
     private replaceOriginal: boolean;
+    private additionalCustomContainersForWhitelist: string[];
 
     public static init(container: DependencyContainer): void 
     {
@@ -59,11 +62,12 @@ export default class ItemFactory
         /** If true, we will replace the original items with custom items.
 		 * If false, the custom items will be separate from the vanilla ones.
 		 */
-        replaceOriginal: boolean,
+        cfakConfig: CfakConfig,
         logger: Logger
     ) 
     {
-        this.replaceOriginal = replaceOriginal;
+        this.replaceOriginal = cfakConfig.replaceBaseItems;
+        this.additionalCustomContainersForWhitelist = cfakConfig.allowInCustomContainers;
         this.logger = logger;
     }
 
@@ -73,7 +77,7 @@ export default class ItemFactory
         this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
         for (const originalId in itemCfg) 
         {
-            const details = itemCfg[originalId as ItemTpl];
+            const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
             const [succ, ogItem] = ItemFactory.itemHelper.getItem(originalId);
             const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
 
@@ -179,6 +183,11 @@ export default class ItemFactory
                 this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
                 this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
             }
+
+            // Whitelist in medical containers (since they're now in the Simple Containers base class, not medical items)
+            this.logger.debug("Whitelisting in containers...");
+            
+            this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist]);
         }
     }
 
@@ -203,7 +212,7 @@ export default class ItemFactory
         };
         const id = details.id;
 
-        const [succ, bset] = ItemFactory.itemHelper.getItem(
+        const [succ, baseItem] = ItemFactory.itemHelper.getItem(
             ItemTpl.MEDKIT_CAR_FIRST_AID_KIT
         );
         if (!succ) 
@@ -211,7 +220,7 @@ export default class ItemFactory
             this.logger.error("Couldn't get original item for cloning");
         }
 
-        const newItem = ItemFactory.cloner.clone(bset);
+        const newItem = ItemFactory.cloner.clone(baseItem);
         newItem._id = id;
         newItem._parent = BaseClasses.MEDICAL;
         newItem._name = details.id;
@@ -232,7 +241,8 @@ export default class ItemFactory
             MaxHpResource: 6,
             hpResourceRate: 0,
             CanSellOnRagfair: false,
-            CanRequireOnRagfair: false
+            CanRequireOnRagfair: false,
+            ItemSound: "food_bottle"
         };
         // biome-ignore lint/performance/noDelete: <explanation>
         delete newItem._props.Grids;
@@ -512,5 +522,40 @@ export default class ItemFactory
     {
         const split = id.split("69");
         return split[1] as BarterSchemeType;
+    }
+
+    /**
+     * Adds an item or base class to container(s)'s whitelist
+     */
+    private allowItemOrBaseClassInContainers(itemTplOrBaseClass: string, containerTpls: string[]): void
+    {
+        if (!containerTpls.length) return;
+        const itemDb = ItemFactory.dbService.getItems();
+        for (const containerTpl of containerTpls) 
+        {
+            const container = itemDb[containerTpl];
+            this.logger.debug(`Container grids before modifying whitelist: ${JSON.stringify(container._props.Grids, null, 4)}`)
+            if (!container)
+            {
+                this.logger.error(`Unable to get container item: ${containerTpl}`);
+                return;
+            }
+            const grids = container._props.Grids;
+            if (!grids?.length)
+            {
+                this.logger.debug(`Container has no grids to update filters for: ${containerTpl}`);
+                return;
+            }
+            for (const grid of grids)
+            {
+                const filters = grid._props.filters;
+                for (const filter of filters)
+                {
+                    if (filter.Filter.includes(itemTplOrBaseClass)) continue;
+                    filter.Filter.push(itemTplOrBaseClass);
+                }
+            }
+            this.logger.debug(`Added to container whitelist grids: ${JSON.stringify(container._props.Grids, null, 4)}`)
+        }
     }
 }
