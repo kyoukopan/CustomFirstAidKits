@@ -290,7 +290,7 @@ export default class ItemFactory
 
         // Whitelist in medical containers (since they're now in the Simple Containers base class, not medical items)
         this.logger.debug("Whitelisting in containers...");
-        this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist]);
+        this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist], details._parent);
     }
 
     /**
@@ -450,7 +450,7 @@ export default class ItemFactory
     /**
      * Adds an item or base class to container(s)'s whitelist
      */
-    private allowItemOrBaseClassInContainers(itemTplOrBaseClass: string, containerTpls: string[]): void
+    private allowItemOrBaseClassInContainers(itemTplOrBaseClass: string, containerTpls: string[], parent?: string): void
     {
         if (!containerTpls.length) return;
         const itemDb = ItemFactory.dbService.getItems();
@@ -469,12 +469,22 @@ export default class ItemFactory
                 this.logger.debug(`Container has no grids to update filters for: ${containerTpl}`);
                 return;
             }
+            // Check each grid
             for (const grid of grids)
             {
                 const filters = grid._props.filters;
+                // Check each filter in the grid
                 for (const filter of filters)
                 {
-                    if (filter.Filter.includes(itemTplOrBaseClass)) continue;
+                    if (filter.Filter.length === 0) continue; // Everything is allowed already
+
+                    const whitelistMap = new Map<string, boolean>();
+                    for (const item of filter.Filter)
+                    {
+                        whitelistMap.set(item, true);
+                    }
+                    if (whitelistMap.has(itemTplOrBaseClass) || (parent != null && whitelistMap.has(parent))) continue; // Has this item or its parent whitelisted
+
                     filter.Filter.push(itemTplOrBaseClass);
                 }
             }

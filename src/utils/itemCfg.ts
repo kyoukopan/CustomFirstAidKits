@@ -80,8 +80,9 @@ const misc = [
     ItemTpl.DRINK_EMERGENCY_WATER_RATION
 ];
 
-const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...injectors, ...misc];
+const allAllowedMedicalItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...injectors, ...misc];
 
+const secureContainers = [ItemTpl.SECURE_CONTAINER_ALPHA, ItemTpl.SECURE_CONTAINER_BETA, ItemTpl.SECURE_CONTAINER_BOSS, ItemTpl.SECURE_CONTAINER_EPSILON, ItemTpl.SECURE_CONTAINER_GAMMA, ItemTpl.SECURE_CONTAINER_GAMMA_TUE, ItemTpl.SECURE_CONTAINER_KAPPA, ItemTpl.SECURE_THETA_SECURE_CONTAINER, ItemTpl.SECURE_WAIST_POUCH, ItemTpl.SECURE_TOURNAMENT_SECURED_CONTAINER]
 const medicalContainers = [ItemTpl.CONTAINER_MEDICINE_CASE, ItemTpl.BACKPACK_LBT2670_SLIM_FIELD_MED_PACK_BLACK];
 
 type MedkitInfo = Omit<ItemCfgInfo, "itemToCloneTpl" | "_parent" | "allowedParentContainers" | "prefab" | "handbookParent">;
@@ -90,7 +91,7 @@ function createMedkitDetails(info: MedkitInfo): ItemCfgInfo
     return {
         itemToCloneTpl: ItemTpl.CONTAINER_SICC,
         _parent: BaseClasses.SIMPLE_CONTAINER,
-        allowedParentContainers: medicalContainers,
+        allowedParentContainers: [...medicalContainers, ...secureContainers],
         prefab: "Use Original",
         handbookParent: handbookMedkitsId,
         ...info
@@ -146,7 +147,7 @@ const itemCfg: ItemCfg = {
             }
         ],
         weight: 0.2,
-        allowedItems: allItems,
+        allowedItems: allAllowedMedicalItems,
         locale: {
             name: "Custom Salewa",
             shortName: "C-Salewa",
@@ -185,7 +186,7 @@ const itemCfg: ItemCfg = {
             }
         ],
         weight: 0.2,
-        allowedItems: allItems,
+        allowedItems: allAllowedMedicalItems,
         locale: {
             name: "Custom IFAK",
             shortName: "C-IFAK",
@@ -226,7 +227,7 @@ const itemCfg: ItemCfg = {
             }
         ],
         weight: 0.22,
-        allowedItems: allItems,
+        allowedItems: allAllowedMedicalItems,
         locale: {
             name: "Custom AFAK",
             shortName: "C-AFAK",
@@ -259,7 +260,7 @@ const itemCfg: ItemCfg = {
             }
         ],
         weight: 0.4,
-        allowedItems: allItems,
+        allowedItems: allAllowedMedicalItems,
         locale: {
             name: "Custom Grizzly Medical Kit",
             shortName: "C-GRIZZLY",
@@ -308,7 +309,7 @@ const itemCfg: ItemCfg = {
         height: 2,
         itemSound: "food_bottle",
         backgroundColor: "orange",
-        allowedParentContainers: medicalContainers,
+        allowedParentContainers: [...medicalContainers, ...secureContainers],
         soldBy: Traders.THERAPIST,
         otherProps: {
             effects_damage: {},
