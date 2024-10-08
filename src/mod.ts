@@ -90,8 +90,8 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
 
         ItemFactory.init(container);
         const itemFactory = new ItemFactory(this.cfakCfg, this.logger);
-        itemFactory.createItems();
         itemFactory.createBloodbag();
+        itemFactory.createItems();
         this.logger.log("Items added!");
         itemFactory.barterChanges();
         this.logger.log("Trades updated!");

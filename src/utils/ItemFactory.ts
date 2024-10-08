@@ -239,7 +239,7 @@ export default class ItemFactory
             effects_health: {},
             medUseTime: 6,
             MaxHpResource: 6,
-            hpResourceRate: 0,
+            hpResourceRate: 1,
             CanSellOnRagfair: false,
             CanRequireOnRagfair: false,
             ItemSound: "food_bottle"
@@ -248,16 +248,22 @@ export default class ItemFactory
         delete newItem._props.Grids;
         
         // Add SPT Realism stuff
-        newItem._props.ConflictingItems.splice(0, 0, "SPTRM");
-        newItem._props.ConflictingItems.splice(1, 0, "medkit");
-        newItem._props.ConflictingItems.splice(2, 0, "none");
-        newItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
-        newItem._props.ConflictingItems.splice(4, 0, "true");
-        newItem._props.ConflictingItems.splice(5, 0, "");
-        newItem._props.ConflictingItems.splice(6, 0, "50"); // HP restore amount
-        newItem._props.ConflictingItems.splice(7, 0, "");
-        newItem._props.ConflictingItems.splice(8, 0, "");
-        
+        if (newItem._props.ConflictingItems[0] === "SPTRM") // Cloned CAR kit already has SPT Realism fields, just change HP restore
+        {
+            newItem._props.ConflictingItems[6] = "60"; // HP restore amount
+        }
+        else 
+        {
+            newItem._props.ConflictingItems.splice(0, 0, "SPTRM");
+            newItem._props.ConflictingItems.splice(1, 0, "medkit");
+            newItem._props.ConflictingItems.splice(2, 0, "none");
+            newItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
+            newItem._props.ConflictingItems.splice(4, 0, "true");
+            newItem._props.ConflictingItems.splice(5, 0, "");
+            newItem._props.ConflictingItems.splice(6, 0, "60"); // HP restore amount
+            newItem._props.ConflictingItems.splice(7, 0, "");
+            newItem._props.ConflictingItems.splice(8, 0, "");
+        }
 
         this.logger.debug("Item template:");
         this.logger.debug(JSON.stringify(newItem, null, 4));
