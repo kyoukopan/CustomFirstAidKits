@@ -18,8 +18,8 @@ import { Money } from "@spt/models/enums/Money";
 import { HideoutAreas } from "@spt/models/enums/HideoutAreas";
 import type { IHideoutProduction } from "@spt/models/eft/hideout/IHideoutProduction";
 import type CfakConfig from "./types/CfakConfig";
-
-const handbookMedkitsId = "5b47574386f77428ca22b338";
+import type { ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
+import { CustomNewItemTpl, type OriginalMedkitItemTpl } from "./types/Item";
 
 enum BarterSchemeType 
 {
@@ -72,45 +72,70 @@ export default class ItemFactory
     }
 
     /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
-    public createItems(): void 
+    public createMedkits(): void 
     {
+        const traders = ItemFactory.dbService.getTraders();
         this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
         for (const originalId in itemCfg) 
         {
-            const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
-            const [succ, ogItem] = ItemFactory.itemHelper.getItem(originalId);
-            const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
+            const details = itemCfg[originalId as OriginalMedkitItemTpl];
+            this.createItem(details, this.replaceOriginal, originalId as ItemTpl);
+            this.barterChanges(traders, details, this.replaceOriginal, originalId as ItemTpl);
+        }
+    }
 
-            this.logger.debug(`Current item: ${details.idForNewItem}`, true);
-
-            if (!succ) 
+    /** Creates our custom first aid kits and adds/replaces them in DB, handbook, etc */
+    private createItem(details: ItemCfgInfo, replaceOriginal: boolean, originalTplToCopy?: ItemTpl): void 
+    {
+        let ogItem: ITemplateItem;
+        if (originalTplToCopy)
+        {
+            const result = ItemFactory.itemHelper.getItem(originalTplToCopy);
+            if (!result[0]) 
             {
-                this.logger.error(`Unable to find original item ${originalId} in item DB`);
+                this.logger.error(`Unable to find item to copy ${originalTplToCopy} in item DB`);
+                ogItem = null;
             }
-
-            const [siccSucc, sicc] = ItemFactory.itemHelper.getItem(
-                ItemTpl.CONTAINER_SICC
-            );
-            if (!siccSucc) 
+            else 
             {
-                this.logger.error("Couldn't get original SICC for cloning");
+                ogItem = result[1];
             }
+        }
+        else 
+        {
+            ogItem = null;
+        }
 
-            const newItem = ItemFactory.cloner.clone(sicc);
-            newItem._id = idToUse;
-            newItem._parent = BaseClasses.SIMPLE_CONTAINER;
-            newItem._name = details.idForNewItem;
-            newItem._props = {
-                ...newItem._props,
-                Prefab: ogItem._props.Prefab,
-                Grids: [],
-                Weight: details.weight,
-                Width: ogItem._props.Width,
-                Height: ogItem._props.Height,
-                ItemSound: ogItem._props.ItemSound,
-                BackgroundColor: ogItem._props.BackgroundColor
-            };
+        const idToUse = replaceOriginal ? originalTplToCopy : details.idForNewItem;
 
+        this.logger.debug(`Creating item: ${details.idForNewItem} - ${replaceOriginal ? "WITH" : "NO"} replacement`, true);
+
+        const [succ, itemToClone] = ItemFactory.itemHelper.getItem(
+            details.itemToCloneTpl
+        );
+        if (!succ) 
+        {
+            this.logger.error(`Couldn't get item for cloning ${itemToClone}`);
+        }
+
+        const newItem = ItemFactory.cloner.clone(itemToClone);
+        newItem._id = idToUse;
+        newItem._parent = details._parent;
+        newItem._name = details.idForNewItem;
+        newItem._props = {
+            ...newItem._props,
+            Prefab: details.prefab === "Use Original" ? ogItem._props.Prefab : details.prefab,
+            Weight: details.weight ?? details.weight,
+            Width: details.width ?? ogItem._props.Width,
+            Height: details.height ?? ogItem._props.Height,
+            ItemSound: details.itemSound || ogItem._props.ItemSound,
+            BackgroundColor: details.backgroundColor || ogItem._props.BackgroundColor,
+            ...(details.grids && { Grids: [] }),
+            ...(details.otherProps && details.otherProps)
+        };
+
+        if (details.grids)
+        {
             const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
 
             for (let i = 0; i < details.grids.length; i++) 
@@ -136,65 +161,67 @@ export default class ItemFactory
                     _proto: "55d329c24bdc2d892f8b4567"
                 });
             }
-
-            this.logger.debug("Item template:");
-            this.logger.debug(JSON.stringify(newItem, null, 4));
-
-            // For the following, if replaceOriginal is false, we add new entries
-            // Otherwise, we modify the existing item since idToUse is the original item's ID
-
-            // Item DB
-            ItemFactory.itemsTable[idToUse] = newItem;
-            this.logger.debug("Item [added to/replaced in] item DB result:");
-            this.logger.debug(JSON.stringify(ItemFactory.itemsTable[idToUse], null, 4));
-            // Flea prices
-            ItemFactory.dbService.getPrices()[idToUse] = details.price;
-            this.logger.debug("Item [added to/replaced in] flea prices DB result:");
-            this.logger.debug(JSON.stringify(ItemFactory.dbService.getPrices()[idToUse], null, 4));
-
-            if (this.replaceOriginal) 
-            {
-                // Handbook
-                const hbIdx = ItemFactory.handbook.Items.findIndex(
-                    (item) => item.Id === idToUse
-                ); // Find the item in the handbook item array
-                ItemFactory.handbook.Items[hbIdx].Price = details.price; // Id and Parent can stay the same, just change price
-                this.logger.debug("Item replaced in handbook result:");
-                this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[hbIdx], null, 4));
-            }
-            else 
-            {
-                // Handbook
-                ItemFactory.handbook.Items.push({
-                    Id: idToUse,
-                    ParentId: handbookMedkitsId,
-                    Price: details.price
-                });
-                this.logger.debug("Item added to handbook result:");
-                this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
-
-                // Add to locales (not needed if replacing existing)
-                const locale = ItemFactory.dbService.getLocales().global.en;
-                locale[`${idToUse} Name`] = details.locale.name;
-                locale[`${idToUse} ShortName`] = details.locale.shortName;
-                locale[`${idToUse} Description`] = details.locale.description;
-                this.logger.debug("Item added to locales result:");
-                this.logger.debug(`Name: ${JSON.stringify(locale[`${idToUse} Name`], null, 4)}`);
-                this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
-                this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
-            }
-
-            // Whitelist in medical containers (since they're now in the Simple Containers base class, not medical items)
-            this.logger.debug("Whitelisting in containers...");
-            
-            this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist]);
         }
+
+        this.logger.debug("Item template:");
+        this.logger.debug(JSON.stringify(newItem, null, 4));
+
+        // For the following, if replaceOriginal is false, we add new entries
+        // Otherwise, we modify the existing item since idToUse is the original item's ID
+
+        // Item DB
+        ItemFactory.itemsTable[idToUse] = newItem;
+        this.logger.debug("Item [added to/replaced in] item DB result:");
+        this.logger.debug(JSON.stringify(ItemFactory.itemsTable[idToUse], null, 4));
+        
+        // Flea prices
+        ItemFactory.dbService.getPrices()[idToUse] = details.price;
+        this.logger.debug("Item [added to/replaced in] flea prices DB result:");
+        this.logger.debug(JSON.stringify(ItemFactory.dbService.getPrices()[idToUse], null, 4));
+
+        if (replaceOriginal) 
+        {
+            // Handbook
+            const hbIdx = ItemFactory.handbook.Items.findIndex(
+                (item) => item.Id === idToUse
+            ); // Find the item in the handbook item array
+            ItemFactory.handbook.Items[hbIdx].Price = details.price; // Id and Parent can stay the same, just change price
+            this.logger.debug("Item replaced in handbook result:");
+            this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[hbIdx], null, 4));
+        }
+        else 
+        {
+            // Handbook
+            ItemFactory.handbook.Items.push({
+                Id: idToUse,
+                ParentId: details.handbookParent,
+                Price: details.price
+            });
+            this.logger.debug("Item added to handbook result:");
+            this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
+
+            // Add to locales (not needed if replacing existing)
+            const locale = ItemFactory.dbService.getLocales().global.en;
+            locale[`${idToUse} Name`] = details.locale.name;
+            locale[`${idToUse} ShortName`] = details.locale.shortName;
+            locale[`${idToUse} Description`] = details.locale.description;
+            this.logger.debug("Item added to locales result:");
+            this.logger.debug(`Name: ${JSON.stringify(locale[`${idToUse} Name`], null, 4)}`);
+            this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
+            this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
+        }
+
+        // Whitelist in medical containers (since they're now in the Simple Containers base class, not medical items)
+        this.logger.debug("Whitelisting in containers...");
+        this.allowItemOrBaseClassInContainers(idToUse, [...details.allowedParentContainers, ...this.additionalCustomContainersForWhitelist]);
     }
 
     public createBloodbag(): void 
     {
-        this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
-
+        const id = CustomNewItemTpl.WHOLE_BLOOD;
+        const details = itemCfg[id];
+        this.createItem(details, false);
+        /*
         const details = {
             id: "wholeblood",
             price: 12000,
@@ -246,104 +273,34 @@ export default class ItemFactory
         };
         // biome-ignore lint/performance/noDelete: <explanation>
         delete newItem._props.Grids;
+        */
         
+        const wholeBloodItem = ItemFactory.itemsTable[id];
+
         // Add SPT Realism stuff
-        if (newItem._props.ConflictingItems[0] === "SPTRM") // Cloned CAR kit already has SPT Realism fields, just change HP restore
+        if (wholeBloodItem._props.ConflictingItems[0] === "SPTRM") // Cloned CAR kit already has SPT Realism fields, just change HP restore
         {
-            newItem._props.ConflictingItems[6] = "60"; // HP restore amount
+            wholeBloodItem._props.ConflictingItems[6] = "60"; // HP restore amount
         }
         else 
         {
-            newItem._props.ConflictingItems.splice(0, 0, "SPTRM");
-            newItem._props.ConflictingItems.splice(1, 0, "medkit");
-            newItem._props.ConflictingItems.splice(2, 0, "none");
-            newItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
-            newItem._props.ConflictingItems.splice(4, 0, "true");
-            newItem._props.ConflictingItems.splice(5, 0, "");
-            newItem._props.ConflictingItems.splice(6, 0, "60"); // HP restore amount
-            newItem._props.ConflictingItems.splice(7, 0, "");
-            newItem._props.ConflictingItems.splice(8, 0, "");
+            wholeBloodItem._props.ConflictingItems.splice(0, 0, "SPTRM");
+            wholeBloodItem._props.ConflictingItems.splice(1, 0, "medkit");
+            wholeBloodItem._props.ConflictingItems.splice(2, 0, "none");
+            wholeBloodItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
+            wholeBloodItem._props.ConflictingItems.splice(4, 0, "true");
+            wholeBloodItem._props.ConflictingItems.splice(5, 0, "");
+            wholeBloodItem._props.ConflictingItems.splice(6, 0, "60"); // HP restore amount
+            wholeBloodItem._props.ConflictingItems.splice(7, 0, "");
+            wholeBloodItem._props.ConflictingItems.splice(8, 0, "");
         }
 
-        this.logger.debug("Item template:");
-        this.logger.debug(JSON.stringify(newItem, null, 4));
-
-        // For the following, if replaceOriginal is false, we add new entries
-        // Otherwise, we modify the existing item since idToUse is the original item's ID
-
-        // Item DB
-        ItemFactory.itemsTable[id] = newItem;
-        this.logger.debug("Item added to item DB result:");
-        this.logger.debug(JSON.stringify(ItemFactory.itemsTable[id], null, 4));
-        // Flea prices - Maybe people shouldn't be selling blood on the flea market lol..
-        /*
-        ItemFactory.dbService.getPrices()[id] = details.price;
-        this.logger.debug("Item added to flea prices DB result:");
-        this.logger.debug(JSON.stringify(ItemFactory.dbService.getPrices()[id], null, 4));
-        */
+        this.logger.debug("Updated whole blood with SPTRM info:");
+        this.logger.debug(JSON.stringify(wholeBloodItem, null, 4));
 
 
-        // Handbook
-        ItemFactory.handbook.Items.push({
-            Id: id,
-            ParentId: handbookMedkitsId,
-            Price: details.price
-        });
-        this.logger.debug("Item added to handbook result:");
-        this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
-
-        // Add to locales (not needed if replacing existing)
-        const locale = ItemFactory.dbService.getLocales().global.en;
-        locale[`${id} Name`] = details.locale.name;
-        locale[`${id} ShortName`] = details.locale.shortName;
-        locale[`${id} Description`] = details.locale.description;
-        this.logger.debug("Item added to locales result:");
-        this.logger.debug(`Name: ${JSON.stringify(locale[`${id} Name`], null, 4)}`);
-        this.logger.debug(`ShortName: ${JSON.stringify(locale[`${id} ShortName`], null, 4)}`);
-        this.logger.debug(`Description: ${JSON.stringify(locale[`${id} Description`], null, 4)}`);
-
-        this.logger.debug("Updating barter scheme", true);
-        
-        const trader = ItemFactory.dbService.getTraders()[Traders.THERAPIST];
-
-        /** List of barter schemes we need to add */
-        const barterIds: string[] = [];
-
-        // Add custom item as a new barter
-        // Buy with money
-        const barterBuyId = this.getBarterId(id, BarterSchemeType.BUY, 0);
-        const newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, id, trader);
-        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
-        barterIds.push(barterBuyId);
-        // Buy with barter items
-        // if (details.customBarter != null) 
-        // {
-        //     const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
-        //     newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
-        //     barterIds.push(barterBarterId);
-        //     this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
-        // }
-        
-        
-
-        // Add items to and add barter scheme for everything
-        for (const barterId of barterIds) 
-        {
-
-            // Add barter details
-            const barterScheme: IBarterScheme[][] = [
-                [{
-                    _tpl: Money.ROUBLES,
-                    count: details.price
-                }]
-            ];
-                    
-            trader.assort.barter_scheme[barterId] = barterScheme;
-            this.logger.debug(`Added barter scheme: ${JSON.stringify(trader.assort.barter_scheme[barterId], null, 4)}`);
-            // Add loyalty level info
-            trader.assort.loyal_level_items[barterId] = details.loyalLevel.buy;
-            this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
-        }
+        const traders = ItemFactory.dbService.getTraders();
+        this.barterChanges(traders, details, false);
         
         // Add to crafting 
         const craft: IHideoutProduction = {
@@ -379,114 +336,120 @@ export default class ItemFactory
         ItemFactory.dbService.getHideout().production.push(craft);
     }
 
-    /** Adds/updates barter schemes with filled first aid kits */
-    public barterChanges(): void 
+    // /** Adds/updates barter schemes with filled first aid kits */
+    // public medkitBarterChanges(): void 
+    // {
+    //     const traders = ItemFactory.dbService.getTraders();
+    //     for (const originalId in itemCfg) 
+    //     {
+    //         const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
+    //         this.barterChanges(traders, details, this.replaceOriginal, originalId as ItemTpl);
+    //     }
+    // }
+
+    private barterChanges(traders: Record<string, ITrader>, details: ItemCfgInfo, replaceOriginal: boolean, originalTpl?: ItemTpl): void 
     {
         this.logger.debug(`Updating barter schemes - replaceBaseItems = ${this.replaceOriginal}`, true);
-        const traders = ItemFactory.dbService.getTraders();
-        for (const originalId in itemCfg) 
+
+        const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
+        this.logger.debug(`Current item: ${details.idForNewItem}`, true);
+
+        const idToUse = replaceOriginal ? originalTpl : details.idForNewItem;
+
+        // Add contents to all existing barters/purchases
+        for (const trader of Object.values(traders)) 
         {
-            const details: ItemCfgInfo = itemCfg[originalId as ItemTpl];
-            const gridHelper = new GridHelper(details, ItemFactory.hashUtil, this.logger);
-            this.logger.debug(`Current item: ${details.idForNewItem}`, true);
+            if (trader.assort?.items == null) continue;
+            this.logger.debug(`Current trader: ${trader.base.nickname}`, true);
 
-            const idToUse = this.replaceOriginal ? originalId : details.idForNewItem;
+            /** List of barter schemes we need to add */
+            const barterIds: string[] = [];
 
-            // Add contents to all existing barters/purchases
-            for (const trader of Object.values(traders)) 
+            if (replaceOriginal) 
             {
-                if (trader.assort?.items == null) continue;
-                this.logger.debug(`Current trader: ${trader.base.nickname}`, true);
-
-                /** List of barter schemes we need to add */
-                const barterIds: string[] = [];
-
-                if (this.replaceOriginal) 
+                // Find all existing barter schemes for this item
+                for (const item of Object.values(trader.assort?.items))
                 {
-                    // Find all existing barter schemes for this item
-                    for (const item of Object.values(trader.assort?.items))
+                    if (item._tpl === idToUse) 
                     {
-                        if (item._tpl === idToUse) 
-                        {
-                            barterIds.push(item._id);
-                        }
+                        barterIds.push(item._id);
                     }
                 }
-                if (trader.base._id === details.soldBy) 
+            }
+            if (trader.base._id === details.soldBy) 
+            {
+                // Add the empty container to barters (if specified)
+                if (details.traderSellsEmptyToo)
                 {
-                    // Add the empty container to barters (if specified)
-                    if (details.traderSellsEmptyToo)
-                    {
-                        const barterEmptyId = this.getBarterId(idToUse, BarterSchemeType.EMPTY, 0);
-                        const newIdxDebug = this.addBaseContainerToAssortItems(barterEmptyId, idToUse, trader);
-                        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
-                        barterIds.push(barterEmptyId);
-                    }
-
-                    if (!this.replaceOriginal)
-                    {
-                        // Add custom item as a new barter
-                        // Buy with money
-                        const barterBuyId = this.getBarterId(idToUse, BarterSchemeType.BUY, 0);
-                        let newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
-                        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
-                        barterIds.push(barterBuyId);
-                        // Buy with barter items
-                        if (details.customBarter != null) 
-                        {
-                            const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
-                            newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
-                            barterIds.push(barterBarterId);
-                            this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
-                        }
-                    }
+                    const barterEmptyId = this.getBarterId(idToUse, BarterSchemeType.EMPTY, 0);
+                    const newIdxDebug = this.addBaseContainerToAssortItems(barterEmptyId, idToUse, trader);
+                    this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
+                    barterIds.push(barterEmptyId);
                 }
 
-                // Add items to and add barter scheme for everything
-                for (const barterId of barterIds) 
+                if (!replaceOriginal)
                 {
-                    const bType = this.getBarterSchemeDetails(barterId);
-
-                    // Add items to slots, obv empty buy scheme doesn't come with items...
-                    if (bType !== BarterSchemeType.EMPTY) 
+                    // Add custom item as a new barter
+                    // Buy with money
+                    const barterBuyId = this.getBarterId(idToUse, BarterSchemeType.BUY, 0);
+                    let newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
+                    this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
+                    barterIds.push(barterBuyId);
+                    // Buy with barter items
+                    if (details.customBarter != null) 
                     {
-                        gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
+                        const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
+                        newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
+                        barterIds.push(barterBarterId);
+                        this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
                     }
+                }
+            }
 
-                    // Don't modify/add original buy/barter scheme info
-                    if (this.replaceOriginal && bType !== BarterSchemeType.EMPTY) continue;
+            // Add items to and add barter scheme for everything
+            for (const barterId of barterIds) 
+            {
+                const bType = this.getBarterSchemeDetails(barterId);
+
+                // Add items to slots, obv empty buy scheme doesn't come with items...
+                if (bType !== BarterSchemeType.EMPTY && details.grids) 
+                {
+                    gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
+                }
+
+                // Don't modify/add original buy/barter scheme info
+                if (replaceOriginal && bType !== BarterSchemeType.EMPTY) continue;
                     
-                    this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
+                this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
 
-                    // Add barter details
-                    let barterScheme: IBarterScheme[][];
-                    switch (bType)
-                    {
-                        case BarterSchemeType.BARTER:
-                            barterScheme = details.customBarter;
-                            break;
-                        case BarterSchemeType.BUY:
-                            barterScheme = [
-                                [{
-                                    _tpl: details.currency,
-                                    count: details.bundlePrice
-                                }]
-                            ];
-                            break;
-                        case BarterSchemeType.EMPTY:
-                            barterScheme = [
-                                [{
-                                    _tpl: details.currency,
-                                    count: details.price
-                                }]
-                            ];
-                    }
-                    trader.assort.barter_scheme[barterId] = barterScheme;
-                    this.logger.debug(`Added barter scheme: ${JSON.stringify(trader.assort.barter_scheme[barterId], null, 4)}`);
-                    // Add loyalty level info
-                    trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
-                    this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
+                // Add barter details
+                let barterScheme: IBarterScheme[][];
+                switch (bType)
+                {
+                    case BarterSchemeType.BARTER:
+                        barterScheme = details.customBarter;
+                        break;
+                    case BarterSchemeType.BUY:
+                        barterScheme = [
+                            [{
+                                _tpl: details.currency,
+                                count: details.bundlePrice ?? details.price // price as fallback for non-bundled stuff
+                            }]
+                        ];
+                        break;
+                    case BarterSchemeType.EMPTY:
+                        barterScheme = [
+                            [{
+                                _tpl: details.currency,
+                                count: details.price
+                            }]
+                        ];
                 }
+                trader.assort.barter_scheme[barterId] = barterScheme;
+                this.logger.debug(`Added barter scheme: ${JSON.stringify(trader.assort.barter_scheme[barterId], null, 4)}`);
+                // Add loyalty level info
+                trader.assort.loyal_level_items[barterId] = details.loyalLevel[bType.toLowerCase()];
+                this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
             }
         }
     }

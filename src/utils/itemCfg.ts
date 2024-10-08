@@ -3,10 +3,15 @@ import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
 import { Money } from "@spt/models/enums/Money";
 import { Traders } from "@spt/models/enums/Traders";
-import { CustomMedkitItemTpl, type OriginalItemTpl } from "./types/Item";
+import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "./types/Item";
+import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
+
+const handbookMedkitsId = "5b47574386f77428ca22b338";
 
 export interface ItemCfgInfo 
 {
+    itemToCloneTpl: ItemTpl;
+    _parent: BaseClasses,
     idForNewItem: string;
     price: number;
     locale: {
@@ -14,12 +19,12 @@ export interface ItemCfgInfo
         shortName: string;
         description: string;
     };
-    allowedItems: (ItemTpl | BaseClasses)[];
-    grids: {
+    allowedItems?: (ItemTpl | BaseClasses)[];
+    grids?: {
         cellsH: number;
         cellsV: number;
     }[];
-    weight: number;
+    weight?: number;
     bundled?: ItemTpl[];
     bundlePrice?: number;
     currency: Money;
@@ -32,9 +37,16 @@ export interface ItemCfgInfo
     };
     traderSellsEmptyToo?: boolean;
     allowedParentContainers: ItemTpl[];
+    prefab: Prefab | "Use Original";
+    height?: number;
+    width?: number;
+    itemSound?: string;
+    backgroundColor?: string;
+    handbookParent: string;
+    otherProps?: Props
 }
 
-export type ItemCfg = Partial<Record<OriginalItemTpl, ItemCfgInfo>>;
+export type ItemCfg = Record<OriginalItemTpl | CustomNewItemTpl, ItemCfgInfo>;
 
 const bandages = [
     ItemTpl.MEDICAL_ARMY_BANDAGE,
@@ -72,8 +84,21 @@ const allItems = [...bandages, ...tourniquets, ...hemostatic, ...splints, ...inj
 
 const medicalContainers = [ItemTpl.CONTAINER_MEDICINE_CASE, ItemTpl.BACKPACK_LBT2670_SLIM_FIELD_MED_PACK_BLACK];
 
+type MedkitInfo = Omit<ItemCfgInfo, "itemToCloneTpl" | "_parent" | "allowedParentContainers" | "prefab" | "handbookParent">;
+function createMedkitDetails(info: MedkitInfo): ItemCfgInfo
+{
+    return {
+        itemToCloneTpl: ItemTpl.CONTAINER_SICC,
+        _parent: BaseClasses.SIMPLE_CONTAINER,
+        allowedParentContainers: medicalContainers,
+        prefab: "Use Original",
+        handbookParent: handbookMedkitsId,
+        ...info
+    }
+}
+
 const itemCfg: ItemCfg = {
-    [ItemTpl.MEDKIT_CAR_FIRST_AID_KIT]: {
+    [ItemTpl.MEDKIT_CAR_FIRST_AID_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.CAR_FIRST_AID_KIT,
         price: 4000,
         grids: [
@@ -101,10 +126,9 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 1
-        },
-        allowedParentContainers: medicalContainers
-    },
-    [ItemTpl.MEDKIT_SALEWA_FIRST_AID_KIT]: {
+        }
+    }),
+    [ItemTpl.MEDKIT_SALEWA_FIRST_AID_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.SALEWA_FIRST_AID_KIT,
         price: 20000,
         grids: [
@@ -145,10 +169,9 @@ const itemCfg: ItemCfg = {
         loyalLevel: {
             buy: 2
             // barter: 2
-        },
-        allowedParentContainers: medicalContainers
-    },
-    [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: {
+        }
+    }),
+    [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.IFAK_FIST_AID_KIT,
         price: 16000,
         grids: [
@@ -187,10 +210,9 @@ const itemCfg: ItemCfg = {
             barter: 2,
             empty: 1
         },
-        traderSellsEmptyToo: true,
-        allowedParentContainers: medicalContainers
-    },
-    [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: {
+        traderSellsEmptyToo: true
+    }),
+    [ItemTpl.MEDKIT_AFAK_TACTICAL_INDIVIDUAL_FIRST_AID_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.AFAK_FIRST_AID_KIT,
         price: 169,
         grids: [
@@ -221,10 +243,9 @@ const itemCfg: ItemCfg = {
             barter: 2,
             empty: 2
         },
-        traderSellsEmptyToo: true,
-        allowedParentContainers: medicalContainers
-    },
-    [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: {
+        traderSellsEmptyToo: true
+    }),
+    [ItemTpl.MEDKIT_GRIZZLY_MEDICAL_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.GRIZZLY_FIRST_AID_KIT,
         price: 29000,
         grids: [
@@ -261,8 +282,44 @@ const itemCfg: ItemCfg = {
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 4
+        }
+    }),
+    [CustomNewItemTpl.WHOLE_BLOOD]: {
+        itemToCloneTpl: ItemTpl.MEDKIT_CAR_FIRST_AID_KIT,
+        _parent: BaseClasses.MEDICAL,
+        idForNewItem: CustomNewItemTpl.WHOLE_BLOOD,
+        price: 12000,
+        currency: Money.ROUBLES,
+        weight: 0.57,
+        locale: {
+            name: "Whole Blood",
+            shortName: "WB",
+            description: "Whole blood for transfusion. Used for resuscitation in cases of traumatic blood loss."
         },
-        allowedParentContainers: medicalContainers
+        loyalLevel: {
+            buy: 1
+        },
+        handbookParent: "5b47574386f77428ca22b2f3",
+        prefab: {
+            path: "bloodbag.bundle",
+            rcid: ""
+        },
+        width: 1,
+        height: 2,
+        itemSound: "food_bottle",
+        backgroundColor: "orange",
+        allowedParentContainers: medicalContainers,
+        soldBy: Traders.THERAPIST,
+        otherProps: {
+            effects_damage: {},
+            effects_health: {},
+            medUseTime: 6,
+            MaxHpResource: 6,
+            hpResourceRate: 1,
+            CanSellOnRagfair: false,
+            CanRequireOnRagfair: false
+        }
     }
+    
 }
 export default itemCfg;
