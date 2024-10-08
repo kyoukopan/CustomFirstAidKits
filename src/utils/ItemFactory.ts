@@ -13,6 +13,10 @@ import { HashUtil } from "@spt/utils/HashUtil";
 import type Logger from "./Logger";
 import { LoggerLvl } from "./Logger";
 import type { IBarterScheme, ITrader } from "@spt/models/eft/common/tables/ITrader";
+import { Traders } from "@spt/models/enums/Traders";
+import { Money } from "@spt/models/enums/Money";
+import { HideoutAreas } from "@spt/models/enums/HideoutAreas";
+import type { IHideoutProduction } from "@spt/models/eft/hideout/IHideoutProduction";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
@@ -176,6 +180,187 @@ export default class ItemFactory
                 this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
             }
         }
+    }
+
+    public createBloodbag(): void 
+    {
+        this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
+
+        const details = {
+            id: "wholeblood",
+            price: 12000,
+            weight: 1,
+            locale: {
+                name: "Whole Blood",
+                shortName: "WB",
+                description:
+                          "Whole blood for transfusion."
+            
+            },
+            loyalLevel: {
+                buy: 1
+            }
+        };
+        const id = details.id;
+
+        const [succ, bset] = ItemFactory.itemHelper.getItem(
+            ItemTpl.MEDKIT_CAR_FIRST_AID_KIT
+        );
+        if (!succ) 
+        {
+            this.logger.error("Couldn't get original item for cloning");
+        }
+
+        const newItem = ItemFactory.cloner.clone(bset);
+        newItem._id = id;
+        newItem._parent = BaseClasses.MEDICAL;
+        newItem._name = details.id;
+        newItem._props = {
+            ...newItem._props,
+            Prefab: {
+                path: "bloodbag.bundle",
+                rcid: ""
+            },
+            Weight: details.weight,
+            Width: 1,
+            Height: 2,
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            effects_damage: {},
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            effects_health: {},
+            medUseTime: 6,
+            MaxHpResource: 6,
+            hpResourceRate: 0,
+            CanSellOnRagfair: false,
+            CanRequireOnRagfair: false
+        };
+        // biome-ignore lint/performance/noDelete: <explanation>
+        delete newItem._props.Grids;
+        
+        // Add SPT Realism stuff
+        newItem._props.ConflictingItems.splice(0, 0, "SPTRM");
+        newItem._props.ConflictingItems.splice(1, 0, "medkit");
+        newItem._props.ConflictingItems.splice(2, 0, "none");
+        newItem._props.ConflictingItems.splice(3, 0, "0"); // trqnt damage per tick
+        newItem._props.ConflictingItems.splice(4, 0, "true");
+        newItem._props.ConflictingItems.splice(5, 0, "");
+        newItem._props.ConflictingItems.splice(6, 0, "50"); // HP restore amount
+        newItem._props.ConflictingItems.splice(7, 0, "");
+        newItem._props.ConflictingItems.splice(8, 0, "");
+        
+
+        this.logger.debug("Item template:");
+        this.logger.debug(JSON.stringify(newItem, null, 4));
+
+        // For the following, if replaceOriginal is false, we add new entries
+        // Otherwise, we modify the existing item since idToUse is the original item's ID
+
+        // Item DB
+        ItemFactory.itemsTable[id] = newItem;
+        this.logger.debug("Item added to item DB result:");
+        this.logger.debug(JSON.stringify(ItemFactory.itemsTable[id], null, 4));
+        // Flea prices - Maybe people shouldn't be selling blood on the flea market lol..
+        /*
+        ItemFactory.dbService.getPrices()[id] = details.price;
+        this.logger.debug("Item added to flea prices DB result:");
+        this.logger.debug(JSON.stringify(ItemFactory.dbService.getPrices()[id], null, 4));
+        */
+
+
+        // Handbook
+        ItemFactory.handbook.Items.push({
+            Id: id,
+            ParentId: handbookMedkitsId,
+            Price: details.price
+        });
+        this.logger.debug("Item added to handbook result:");
+        this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
+
+        // Add to locales (not needed if replacing existing)
+        const locale = ItemFactory.dbService.getLocales().global.en;
+        locale[`${id} Name`] = details.locale.name;
+        locale[`${id} ShortName`] = details.locale.shortName;
+        locale[`${id} Description`] = details.locale.description;
+        this.logger.debug("Item added to locales result:");
+        this.logger.debug(`Name: ${JSON.stringify(locale[`${id} Name`], null, 4)}`);
+        this.logger.debug(`ShortName: ${JSON.stringify(locale[`${id} ShortName`], null, 4)}`);
+        this.logger.debug(`Description: ${JSON.stringify(locale[`${id} Description`], null, 4)}`);
+
+        this.logger.debug("Updating barter scheme", true);
+        
+        const trader = ItemFactory.dbService.getTraders()[Traders.THERAPIST];
+
+        /** List of barter schemes we need to add */
+        const barterIds: string[] = [];
+
+        // Add custom item as a new barter
+        // Buy with money
+        const barterBuyId = this.getBarterId(id, BarterSchemeType.BUY, 0);
+        const newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, id, trader);
+        this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
+        barterIds.push(barterBuyId);
+        // Buy with barter items
+        // if (details.customBarter != null) 
+        // {
+        //     const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
+        //     newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
+        //     barterIds.push(barterBarterId);
+        //     this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
+        // }
+        
+        
+
+        // Add items to and add barter scheme for everything
+        for (const barterId of barterIds) 
+        {
+
+            // Add barter details
+            const barterScheme: IBarterScheme[][] = [
+                [{
+                    _tpl: Money.ROUBLES,
+                    count: details.price
+                }]
+            ];
+                    
+            trader.assort.barter_scheme[barterId] = barterScheme;
+            this.logger.debug(`Added barter scheme: ${JSON.stringify(trader.assort.barter_scheme[barterId], null, 4)}`);
+            // Add loyalty level info
+            trader.assort.loyal_level_items[barterId] = details.loyalLevel.buy;
+            this.logger.debug(`Added loyalty level: ${trader.assort.loyal_level_items[barterId]}`);
+        }
+        
+        // Add to crafting 
+        const craft: IHideoutProduction = {
+            _id: "wholebloodcraft",
+            areaType: HideoutAreas.MEDSTATION,
+            requirements: [
+                {
+                    areaType: HideoutAreas.MEDSTATION,
+                    requiredLevel: 1,
+                    type: "Area"
+                },
+                {
+                    templateId: ItemTpl.BARTER_MEDICAL_BLOODSET,
+                    count: 1,
+                    isFunctional: false,
+                    isEncoded: false,
+                    type: "Item"
+                },
+                {
+                    templateId: ItemTpl.MEDICAL_ESMARCH_TOURNIQUET,
+                    type: "Tool"
+                }
+            ],
+            productionTime: 1000,
+            needFuelForAllProductionTime: false,
+            locked: false,
+            endProduct: "wholeblood",
+            continuous: false,
+            count: 2,
+            productionLimitCount: 0,
+            isEncoded: false
+        }
+        ItemFactory.dbService.getHideout().production.push(craft);
     }
 
     /** Adds/updates barter schemes with filled first aid kits */

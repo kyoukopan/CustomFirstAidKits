@@ -8,7 +8,7 @@
     "SPT-Realism"
   ],
   "incompatibilities": [],
-  "isBundleMod": false,
+  "isBundleMod": true,
   "main": "src/mod.js",
   "scripts": {
     "setup": "npm i",

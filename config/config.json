@@ -7,5 +7,5 @@
   "replaceBaseItems": true,
 
   "debug description": ["Adds additional logging to the server for debugging."],
-  "debug": false
+  "debug": true
 }

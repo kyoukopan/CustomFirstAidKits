@@ -1,0 +1,12 @@
+{
+  "manifest": [
+    {
+      "key": "bloodbag.bundle",
+      "dependencyKeys": [
+        "shaders",
+        "cubemaps",
+        "assets/commonassets/physics/physicsmaterials.bundle"
+      ]
+    }
+  ]
+}
