@@ -6,6 +6,16 @@
   ],
   "replaceBaseItems": true,
 
+  "allowInCustomContainers description": [
+    "If you have modded containers installed and want to allow the medkits to go inside them, pass the container's ID into this array.",
+    "Because we change the base class of the medkits to Simple Containers, custom containers that allow medical items won't automatically support our medkits.",
+    "If you use this, please make sure this mod loads after the mod that introduces the container.",
+    {
+      "example allowInCustomContainers": ["idForContainer1", "idForContainer2"]
+    }
+  ],
+  "allowInCustomContainers": [],
+
   "debug description": ["Adds additional logging to the server for debugging."],
-  "debug": false
+  "debug": true
 }

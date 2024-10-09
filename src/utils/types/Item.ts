@@ -1,6 +1,9 @@
-import { ItemTpl } from "@spt/models/enums/ItemTpl";
+export type CustomReplacementItemTpl = CustomMedkitItemTpl;
 
-export type CustomItemTpl = CustomMedkitItemTpl;
+export enum CustomNewItemTpl
+{
+    WHOLE_BLOOD = "wholeblood"
+}
 
 export enum CustomMedkitItemTpl 
 {
@@ -23,7 +26,7 @@ export enum OriginalMedkitItemTpl
 }
 
 /** Maps IDs for custom to originals. Aids reverse lookup since itemCfg is indexed by original Id */
-export const customToOriginalMap: Record<CustomItemTpl, OriginalItemTpl> = {
+export const customToOriginalMap: Record<CustomReplacementItemTpl, OriginalItemTpl> = {
     // Medkits
     [CustomMedkitItemTpl.CAR_FIRST_AID_KIT]: OriginalMedkitItemTpl.CAR_FIRST_AID_KIT,
     [CustomMedkitItemTpl.SALEWA_FIRST_AID_KIT]: OriginalMedkitItemTpl.SALEWA_FIRST_AID_KIT,

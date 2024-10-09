@@ -1,7 +1,8 @@
-import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import type CfakConfig from "./types/CfakConfig";
-import { LogTextColor } from "@spt/models/spt/logging/LogTextColor";
 import { LogBackgroundColor } from "@spt/models/spt/logging/LogBackgroundColor";
+import { LogTextColor } from "@spt/models/spt/logging/LogTextColor";
+import type { ILogger } from "@spt/models/spt/utils/ILogger";
+import { APP_NAME_FRIENDLY } from "./types/AppTypes";
+import type CfakConfig from "./types/CfakConfig";
 
 export enum LoggerLvl 
 {
@@ -12,7 +13,7 @@ export enum LoggerLvl
     DEBUG_HEADER = 4
 }
 
-const prefix = "Custom First Aid Kits: ";
+const prefix = `${APP_NAME_FRIENDLY}: `;
 
 export default class Logger 
 {
@@ -35,7 +36,7 @@ export default class Logger
             case LoggerLvl.DEBUG:
                 if (Logger.isDebug) 
                 {
-                    this.sptLogger.debug(prefix + data, true);
+                    this.sptLogger.debug(prefix + data);
                 }
                 break;
             case LoggerLvl.HEADER:

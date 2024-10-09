@@ -115,6 +115,12 @@ async function main() {
         await copyFiles(currentDir, projectDir, buildIgnorePatterns);
         logger.log("success", "Files successfully copied to temporary directory.");
 
+        // Copy files from temp directory to mod directory for testing
+        logger.log("info", "Copying mod files to SPT mod directory...");
+        const modDir = path.resolve(`../../user/mods/${projectName}`);
+        await copyFiles(projectDir, modDir);
+        logger.log("success", `Files successfully copied to mod directory ${modDir}`);
+
         // Create a zip archive of the project files.
         logger.log("info", "Beginning folder compression...");
         const zipFilePath = path.join(path.dirname(projectDir), `${projectName}.zip`);
@@ -298,7 +304,7 @@ async function copyFiles(srcDir, destDir, ignoreHandler) {
             const relativePath = path.relative(process.cwd(), srcPath);
 
             // If the ignore handler dictates that this file should be ignored, skip to the next iteration.
-            if (ignoreHandler.ignores(relativePath)) {
+            if (ignoreHandler?.ignores(relativePath)) {
                 logger.log("info", `Ignored: /${path.relative(process.cwd(), srcPath)}`);
                 continue;
             }
