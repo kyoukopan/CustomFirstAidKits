@@ -44,7 +44,7 @@ export interface ItemCfgInfo
     itemSound?: string;
     backgroundColor?: string;
     handbookParent: string;
-    otherProps?: Props & { overrides: Record<ModNames, Props> }
+    otherProps?: Props & { overrides?: Record<ModNames, Props> }
 }
 
 export type ItemCfg = Record<OriginalItemTpl | CustomNewItemTpl, ItemCfgInfo>;
@@ -95,6 +95,9 @@ function createMedkitDetails(info: MedkitInfo): ItemCfgInfo
         allowedParentContainers: [...medicalContainers, ...secureContainers],
         prefab: "Use Original",
         handbookParent: handbookMedkitsId,
+        otherProps: {
+            DiscardLimit: -1
+        },
         ...info
     }
 }
