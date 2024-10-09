@@ -321,8 +321,8 @@ const itemCfg: ItemCfg = {
             effects_damage: {},
             effects_health: {},
             medUseTime: 6,
-            MaxHpResource: 220,
-            hpResourceRate: 70,
+            MaxHpResource: 300,
+            hpResourceRate: 85,
             CanSellOnRagfair: false,
             CanRequireOnRagfair: false,
             UsePrefab: {
