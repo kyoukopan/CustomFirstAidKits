@@ -10,9 +10,10 @@ import type { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
 import type { HashUtil } from "@spt/utils/HashUtil";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type { DependencyContainer } from "tsyringe";
+import { medkitCraftsToRemove } from "../db/hideout";
+import itemCfg, { type ItemCfgInfo } from "../db/itemCfg";
 import GridHelper from "./GridHelper";
 import type Logger from "./Logger";
-import itemCfg, { type ItemCfgInfo } from "./itemCfg";
 import type { ModFlags } from "./types/AppTypes";
 import type CfakConfig from "./types/CfakConfig";
 import { CustomNewItemTpl, OriginalMedkitItemTpl } from "./types/Item";
@@ -78,6 +79,12 @@ export default class ItemFactory
             const details = itemCfg[originalId];
             this.createItem(details, this.replaceOriginal, originalId);
             this.barterChanges(traders, details, this.replaceOriginal, originalId);
+        }
+
+        if (this.replaceOriginal)
+        {
+            // Remove medkit crafts since they don't make sense anymore
+            this.removeHideoutCrafts(medkitCraftsToRemove);
         }
     }
 
@@ -525,6 +532,25 @@ export default class ItemFactory
                 }
             }
             this.logger.debug(`Added to container whitelist grids: ${JSON.stringify(container._props.Grids, null, 4)}`)
+        }
+    }
+
+    /**
+     * Removes crafts from the hideout/production list
+     */
+    private removeHideoutCrafts(craftIds: string[]): void
+    {
+        if (craftIds.length === 0) return;
+
+        const productionList = ItemFactory.dbService.getHideout().production;
+        for (let i = 0; i < productionList.length; i++)
+        {
+            if (craftIds.includes(productionList[i]._id))
+            {
+                this.logger.debug(`Removing craft: ${productionList[i]._id} Product: ${productionList[i].endProduct}`);
+                productionList.splice(i, 1);
+                i--;
+            }
         }
     }
 }

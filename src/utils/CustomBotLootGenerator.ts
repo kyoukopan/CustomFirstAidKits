@@ -1,31 +1,28 @@
 import { BotLootGenerator } from "@spt/generators/BotLootGenerator";
+import type { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
+import type { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
+import type { BotHelper } from "@spt/helpers/BotHelper";
+import type { HandbookHelper } from "@spt/helpers/HandbookHelper";
+import type { InventoryHelper } from "@spt/helpers/InventoryHelper";
+import type { ItemHelper } from "@spt/helpers/ItemHelper";
+import type { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
 import type { Inventory } from "@spt/models/eft/common/tables/IBotBase";
 import type { IBotType } from "@spt/models/eft/common/tables/IBotType";
 import type { Item } from "@spt/models/eft/common/tables/IItem";
 import type { ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
-import { CustomMedkitItemTpl, customToOriginalMap, OriginalMedkitItemTpl } from "./types/Item";
-import type { BotLootCacheService } from "@spt/services/BotLootCacheService";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
+import type { ConfigServer } from "@spt/servers/ConfigServer";
+import type { BotLootCacheService } from "@spt/services/BotLootCacheService";
+import type { DatabaseService } from "@spt/services/DatabaseService";
+import type { LocalisationService } from "@spt/services/LocalisationService";
 import type { HashUtil } from "@spt/utils/HashUtil";
 import type { RandomUtil } from "@spt/utils/RandomUtil";
-import type { ItemHelper } from "@spt/helpers/ItemHelper";
-import type { InventoryHelper } from "@spt/helpers/InventoryHelper";
-import type { DatabaseService } from "@spt/services/DatabaseService";
-import type { HandbookHelper } from "@spt/helpers/HandbookHelper";
-import type { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
-import type { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
-import type { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
-import type { BotHelper } from "@spt/helpers/BotHelper";
-import type { LocalisationService } from "@spt/services/LocalisationService";
-import type { ConfigServer } from "@spt/servers/ConfigServer";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
-import type CfakConfig from "./types/CfakConfig";
-import itemCfg, { type ItemCfgInfo } from "./itemCfg";
+import itemCfg, { type ItemCfgInfo } from "../db/itemCfg";
 import GridHelper from "./GridHelper";
 import type Logger from "./Logger";
-import { LootCacheType } from "@spt/models/spt/bots/IBotLootCache";
-import { EquipmentSlots } from "@spt/models/enums/EquipmentSlots";
-import { ItemAddedResult } from "@spt/models/enums/ItemAddedResult";
+import type CfakConfig from "./types/CfakConfig";
+import { CustomMedkitItemTpl, OriginalMedkitItemTpl, customToOriginalMap } from "./types/Item";
 
 export default class CustomBotLootGenerator extends BotLootGenerator 
 {

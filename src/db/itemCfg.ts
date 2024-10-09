@@ -1,11 +1,11 @@
+import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
 import type { IBarterScheme } from "@spt/models/eft/common/tables/ITrader";
 import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
 import { Money } from "@spt/models/enums/Money";
 import { Traders } from "@spt/models/enums/Traders";
-import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "./types/Item";
-import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
-import { ModNames } from "./types/AppTypes";
+import { ModNames } from "../utils/types/AppTypes";
+import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "../utils/types/Item";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
