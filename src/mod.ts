@@ -1,55 +1,61 @@
 import type { DependencyContainer } from "tsyringe";
 
 import type { BotLootGenerator } from "@spt/generators/BotLootGenerator";
-import { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
-import { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
-import { BotHelper } from "@spt/helpers/BotHelper";
-import { HandbookHelper } from "@spt/helpers/HandbookHelper";
-import { InventoryHelper } from "@spt/helpers/InventoryHelper";
-import { ItemHelper } from "@spt/helpers/ItemHelper";
-import { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
+import type { BotWeaponGenerator } from "@spt/generators/BotWeaponGenerator";
+import type { BotGeneratorHelper } from "@spt/helpers/BotGeneratorHelper";
+import type { BotHelper } from "@spt/helpers/BotHelper";
+import type { HandbookHelper } from "@spt/helpers/HandbookHelper";
+import type { InventoryHelper } from "@spt/helpers/InventoryHelper";
+import type { ItemHelper } from "@spt/helpers/ItemHelper";
+import type { WeightedRandomHelper } from "@spt/helpers/WeightedRandomHelper";
+import type { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
 import type { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import type { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import { ConfigServer } from "@spt/servers/ConfigServer";
-import { BotLootCacheService } from "@spt/services/BotLootCacheService";
-import { DatabaseService } from "@spt/services/DatabaseService";
-import { LocalisationService } from "@spt/services/LocalisationService";
-import { HashUtil } from "@spt/utils/HashUtil";
-import { RandomUtil } from "@spt/utils/RandomUtil";
+import type { ConfigServer } from "@spt/servers/ConfigServer";
+import type { BotLootCacheService } from "@spt/services/BotLootCacheService";
+import type { DatabaseService } from "@spt/services/DatabaseService";
+import type { LocalisationService } from "@spt/services/LocalisationService";
+import type { HashUtil } from "@spt/utils/HashUtil";
+import type { RandomUtil } from "@spt/utils/RandomUtil";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
-import * as _cfakCfg from "../config/config.json";
+import * as _cfakCfg from "../config/config.json"; // eslint-disable-line @typescript-eslint/naming-convention
 import CustomBotLootGenerator from "./utils/CustomBotLootGenerator";
 import ItemFactory from "./utils/ItemFactory";
 import Logger, { LoggerLvl } from "./utils/Logger";
 import type CfakConfig from "./utils/types/CfakConfig";
+import { ModNames, type ModFlags } from "./utils/types/AppTypes";
 
 class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
 {
     private logger: Logger;
     private cfakCfg: CfakConfig;
     private replaceBaseItems: boolean;
+    private modFlags: ModFlags = new Set<string>();
 
     public preSptLoad(container: DependencyContainer): void 
     {
         this.cfakCfg = _cfakCfg;
         const sptLogger = container.resolve<ILogger>("WinstonLogger");
-        const hashUtil = container.resolve(HashUtil);
-        const randomUtil = container.resolve(RandomUtil);
-        const itemHelper = container.resolve(ItemHelper);
-        const inventoryHelper = container.resolve(InventoryHelper);
-        const databaseService = container.resolve(DatabaseService);
-        const handbookHelper = container.resolve(HandbookHelper);
-        const botGeneratorHelper = container.resolve(BotGeneratorHelper);
-        const botWeaponGenerator = container.resolve(BotWeaponGenerator);
-        const weightedRandomHelper = container.resolve(WeightedRandomHelper);
-        const botHelper = container.resolve(BotHelper);
-        const botLootCacheService = container.resolve(BotLootCacheService);
-        const localisationService = container.resolve(LocalisationService);
-        const configServer = container.resolve(ConfigServer);
+        const hashUtil = container.resolve<HashUtil>("HashUtil");
+        const randomUtil = container.resolve<RandomUtil>("RandomUtil");
+        const itemHelper = container.resolve<ItemHelper>("ItemHelper");
+        const inventoryHelper = container.resolve<InventoryHelper>("InventoryHelper");
+        const databaseService = container.resolve<DatabaseService>("DatabaseService");
+        const handbookHelper = container.resolve<HandbookHelper>("HandbookHelper");
+        const botGeneratorHelper = container.resolve<BotGeneratorHelper>("BotGeneratorHelper");
+        const botWeaponGenerator = container.resolve<BotWeaponGenerator>("BotWeaponGenerator");
+        const weightedRandomHelper = container.resolve<WeightedRandomHelper>("WeightedRandomHelper");
+        const botHelper = container.resolve<BotHelper>("BotHelper");
+        const botLootCacheService = container.resolve<BotLootCacheService>("BotLootCacheService");
+        const localisationService = container.resolve<LocalisationService>("LocalisationService");
+        const configServer = container.resolve<ConfigServer>("ConfigServer");
         const cloner = container.resolve<ICloner>("PrimaryCloner");
+        const preSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
         this.logger = new Logger(this.cfakCfg, sptLogger);
         this.replaceBaseItems = this.cfakCfg.replaceBaseItems;
+
+        this.setModFlags(preSptModLoader);
         
         const customBotLootGenerator = new CustomBotLootGenerator(
             sptLogger,
@@ -83,16 +89,30 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
 
     public postDBLoad(container: DependencyContainer): void 
     {
-
         this.logger.log("This mod requires Traders Sell Bundles to function - if you don't have it installed, make sure to install it!", LoggerLvl.HEADER);
         this.logger.log(`Config set to ${this.replaceBaseItems ? "replace existing items" : "add new items and preserve existing first aid kits"}`);
         if (!this.replaceBaseItems) this.logger.log("If you plan to uninstall this mod or change replaceBaseItems to true, make sure to delete the custom mod items from your profile with Profile Editor!", LoggerLvl.HEADER);
 
         ItemFactory.init(container);
-        const itemFactory = new ItemFactory(this.cfakCfg, this.logger);
+        const itemFactory = new ItemFactory(this.cfakCfg, this.logger, this.modFlags);
         itemFactory.createBloodbag();
         itemFactory.createMedkits();
         this.logger.log("Items added!");
+    }
+
+    // Get mods we need to run compatibility stuff for
+    private setModFlags(preSptModLoader: PreSptModLoader)
+    {
+        const modsToFlag = [ModNames.SPT_REALISM];
+        const mods = preSptModLoader.getImportedModsNames();
+        for (const modName of mods)
+        {
+            if (modsToFlag.includes(modName as ModNames))
+            {
+                this.logger.log(`${modName} detected...`);
+                this.modFlags.add(modName);
+            }
+        }
     }
 }
 

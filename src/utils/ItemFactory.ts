@@ -1,25 +1,21 @@
 import type { HandbookHelper } from "@spt/helpers/HandbookHelper";
-import { ItemHelper } from "@spt/helpers/ItemHelper";
-import { BaseClasses } from "@spt/models/enums/BaseClasses";
+import type { ItemHelper } from "@spt/helpers/ItemHelper";
+import type { ITemplateItem, Props } from "@spt/models/eft/common/tables/ITemplateItem";
+import type { IBarterScheme, ITrader } from "@spt/models/eft/common/tables/ITrader";
+import type { IHideoutProduction } from "@spt/models/eft/hideout/IHideoutProduction";
+import { HideoutAreas } from "@spt/models/enums/HideoutAreas";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
-import type { ILogger } from "@spt/models/spt/utils/ILogger";
-import { DatabaseService } from "@spt/services/DatabaseService";
-import { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
+import type { DatabaseService } from "@spt/services/DatabaseService";
+import type { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
+import type { HashUtil } from "@spt/utils/HashUtil";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type { DependencyContainer } from "tsyringe";
-import itemCfg, { type ItemCfgInfo } from "./itemCfg";
 import GridHelper from "./GridHelper";
-import { HashUtil } from "@spt/utils/HashUtil";
 import type Logger from "./Logger";
-import { LoggerLvl } from "./Logger";
-import type { IBarterScheme, ITrader } from "@spt/models/eft/common/tables/ITrader";
-import { Traders } from "@spt/models/enums/Traders";
-import { Money } from "@spt/models/enums/Money";
-import { HideoutAreas } from "@spt/models/enums/HideoutAreas";
-import type { IHideoutProduction } from "@spt/models/eft/hideout/IHideoutProduction";
+import itemCfg, { type ItemCfgInfo } from "./itemCfg";
+import type { ModFlags } from "./types/AppTypes";
 import type CfakConfig from "./types/CfakConfig";
-import type { ITemplateItem } from "@spt/models/eft/common/tables/ITemplateItem";
-import { CustomNewItemTpl, type OriginalMedkitItemTpl } from "./types/Item";
+import { CustomNewItemTpl, OriginalMedkitItemTpl } from "./types/Item";
 
 enum BarterSchemeType 
 {
@@ -48,11 +44,11 @@ export default class ItemFactory
     public static init(container: DependencyContainer): void 
     {
         ItemFactory.container = container;
-        ItemFactory.itemHelper = container.resolve(ItemHelper);
-        ItemFactory.dbService = container.resolve(DatabaseService);
-        ItemFactory.itemBaseClassService = container.resolve(ItemBaseClassService);
-        ItemFactory.cloner = container.resolve("PrimaryCloner");
-        ItemFactory.hashUtil = container.resolve(HashUtil);
+        ItemFactory.itemHelper = container.resolve<ItemHelper>("ItemHelper");
+        ItemFactory.dbService = container.resolve<DatabaseService>("DatabaseService");
+        ItemFactory.itemBaseClassService = container.resolve<ItemBaseClassService>("ItemBaseClassService");
+        ItemFactory.cloner = container.resolve<ICloner>("PrimaryCloner");
+        ItemFactory.hashUtil = container.resolve<HashUtil>("HashUtil");
 
         ItemFactory.itemsTable = ItemFactory.dbService.getItems();
         ItemFactory.handbook = ItemFactory.dbService.getHandbook();
@@ -63,7 +59,8 @@ export default class ItemFactory
 		 * If false, the custom items will be separate from the vanilla ones.
 		 */
         cfakConfig: CfakConfig,
-        logger: Logger
+        logger: Logger,
+        private modFlags: ModFlags
     ) 
     {
         this.replaceOriginal = cfakConfig.replaceBaseItems;
@@ -76,11 +73,11 @@ export default class ItemFactory
     {
         const traders = ItemFactory.dbService.getTraders();
         this.logger.debug(`Creating custom items - replaceBaseItems = ${this.replaceOriginal}`, true);
-        for (const originalId in itemCfg) 
+        for (const originalId of Object.values(OriginalMedkitItemTpl)) 
         {
-            const details = itemCfg[originalId as OriginalMedkitItemTpl];
-            this.createItem(details, this.replaceOriginal, originalId as ItemTpl);
-            this.barterChanges(traders, details, this.replaceOriginal, originalId as ItemTpl);
+            const details = itemCfg[originalId];
+            this.createItem(details, this.replaceOriginal, originalId);
+            this.barterChanges(traders, details, this.replaceOriginal, originalId);
         }
     }
 
@@ -158,7 +155,7 @@ export default class ItemFactory
      */
     private createItem(details): void 
     /**
-    * @param originalTplToCopy If using `replaceOriginal`, this is required
+    * @param originalTplToCopy If using `replaceOriginal`, this is required. Should be the tpl of the item we wish to replace, which will be used to copy some stuff over.
     */
     private createItem(details, replaceOriginal, originalTplToCopy): void 
     /** Creates our custom item adds/replaces it in DB, handbook, etc */
@@ -199,6 +196,30 @@ export default class ItemFactory
         newItem._id = idToUse;
         newItem._parent = details._parent;
         newItem._name = details.idForNewItem;
+
+        let customProps: Props;
+
+        if (details.otherProps != null && "overrides" in details.otherProps) 
+        {
+            const { 
+                overrides, // eslint-disable-line @typescript-eslint/no-unused-vars
+                ...restProps
+            } = details.otherProps;
+
+            customProps = restProps;
+            for (const mod of this.modFlags)
+            {
+                if (overrides[mod] != null)
+                {
+                    customProps = { ...customProps, ...overrides[mod] };
+                }
+            }
+        }
+        else
+        {
+            customProps = details.otherProps;
+        }
+
         newItem._props = {
             ...newItem._props,
             Prefab: details.prefab === "Use Original" ? ogItem._props.Prefab : details.prefab,
@@ -208,7 +229,7 @@ export default class ItemFactory
             ItemSound: details.itemSound || ogItem._props.ItemSound,
             BackgroundColor: details.backgroundColor || ogItem._props.BackgroundColor,
             ...(details.grids && { Grids: [] }),
-            ...(details.otherProps && details.otherProps)
+            ...(customProps && customProps)
         };
 
         if (details.grids)

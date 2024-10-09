@@ -5,6 +5,7 @@ import { Money } from "@spt/models/enums/Money";
 import { Traders } from "@spt/models/enums/Traders";
 import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "./types/Item";
 import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
+import { ModNames } from "./types/AppTypes";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
@@ -43,7 +44,7 @@ export interface ItemCfgInfo
     itemSound?: string;
     backgroundColor?: string;
     handbookParent: string;
-    otherProps?: Props
+    otherProps?: Props & { overrides: Record<ModNames, Props> }
 }
 
 export type ItemCfg = Record<OriginalItemTpl | CustomNewItemTpl, ItemCfgInfo>;
@@ -315,10 +316,21 @@ const itemCfg: ItemCfg = {
             effects_damage: {},
             effects_health: {},
             medUseTime: 6,
-            MaxHpResource: 6,
-            hpResourceRate: 1,
+            MaxHpResource: 220,
+            hpResourceRate: 70,
             CanSellOnRagfair: false,
-            CanRequireOnRagfair: false
+            CanRequireOnRagfair: false,
+            UsePrefab: {
+                path: "assets/content/weapons/usable_items/item_meds_esmarch_tourniquet/item_meds_esmarch_tourniquet_container.bundle",
+                rcid: ""
+            },
+            overrides: {
+                [ModNames.SPT_REALISM]: {
+                    medUseTime: 6,
+                    MaxHpResource: 6,
+                    hpResourceRate: 1
+                }
+            }
         }
     }
     
