@@ -20,7 +20,7 @@ export interface ItemCfgInfo
         shortName: string;
         description: string;
     };
-    allowedItems?: (ItemTpl | BaseClasses)[];
+    allowedItems?: string[];
     grids?: {
         cellsH: number;
         cellsV: number;
@@ -266,12 +266,12 @@ const itemCfg: ItemCfg = {
             }
         ],
         weight: 0.4,
-        allowedItems: allAllowedMedicalItems,
+        allowedItems: [...allAllowedMedicalItems, CustomNewItemTpl.WHOLE_BLOOD],
         locale: {
             name: "Custom Grizzly Medical Kit",
             shortName: "C-GRIZZLY",
             description:
-              "A Grizzly bag that you can fill with your choice of first aid equipment.\nAccepts bandages, tourniquets/CALOK-B, splints, injectors, AI-2, balms, analgin, and emergency water."
+              "A Grizzly bag that you can fill with your choice of first aid equipment.\nAccepts blood transfusion bags, bandages, tourniquets/CALOK-B, splints, injectors, AI-2, balms, analgin, and emergency water."
 
         },
         bundled: [
@@ -321,8 +321,8 @@ const itemCfg: ItemCfg = {
             effects_damage: {},
             effects_health: {},
             medUseTime: 6,
-            MaxHpResource: 220,
-            hpResourceRate: 70,
+            MaxHpResource: 300,
+            hpResourceRate: 85,
             CanSellOnRagfair: false,
             CanRequireOnRagfair: false,
             UsePrefab: {
