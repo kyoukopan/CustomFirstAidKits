@@ -1,5 +1,5 @@
 import type { Item } from "@spt/models/eft/common/tables/IItem";
-import type { ItemCfgInfo } from "./itemCfg";
+import type { ItemCfgInfo } from "../db/itemCfg";
 import type { HashUtil } from "@spt/utils/HashUtil";
 import type Logger from "./Logger";
 import { LoggerLvl } from "./Logger";

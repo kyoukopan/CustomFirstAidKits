@@ -1,11 +1,11 @@
+import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
 import type { IBarterScheme } from "@spt/models/eft/common/tables/ITrader";
 import { BaseClasses } from "@spt/models/enums/BaseClasses";
 import { ItemTpl } from "@spt/models/enums/ItemTpl";
 import { Money } from "@spt/models/enums/Money";
 import { Traders } from "@spt/models/enums/Traders";
-import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "./types/Item";
-import type { Prefab, Props } from "@spt/models/eft/common/tables/ITemplateItem";
-import { ModNames } from "./types/AppTypes";
+import { ModNames } from "../utils/types/AppTypes";
+import { CustomMedkitItemTpl, CustomNewItemTpl, type OriginalItemTpl } from "../utils/types/Item";
 
 const handbookMedkitsId = "5b47574386f77428ca22b338";
 
@@ -29,7 +29,7 @@ export interface ItemCfgInfo
     bundled?: ItemTpl[];
     bundlePrice?: number;
     currency: Money;
-    customBarter?: IBarterScheme[][];
+    customBarter?: { always: boolean; scheme: IBarterScheme[][]};
     soldBy: Traders;
     loyalLevel: {
         buy: number,
@@ -44,7 +44,8 @@ export interface ItemCfgInfo
     itemSound?: string;
     backgroundColor?: string;
     handbookParent: string;
-    otherProps?: Props & { overrides?: Record<ModNames, Props> }
+    otherProps?: Props & { overrides?: Record<ModNames, Props> };
+    deleteBarters?: string[];
 }
 
 export type ItemCfg = Record<OriginalItemTpl | CustomNewItemTpl, ItemCfgInfo>;
@@ -162,19 +163,20 @@ const itemCfg: ItemCfg = {
         bundled: [ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_ASEPTIC_BANDAGE, ItemTpl.MEDICAL_ESMARCH_TOURNIQUET, ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, ItemTpl.DRINK_EMERGENCY_WATER_RATION],
         bundlePrice: 39420,
         currency: Money.ROUBLES,
-        // customBarter: [
-        //     [
-        //         {
-        //             _tpl: ItemTpl.BARTER_BOTTLE_OF_SALINE_SOLUTION,
-        //             count: 2
-        //         }
-        //     ]
-        // ],
+        customBarter: { always: true, scheme: [
+            [
+                {
+                    _tpl: ItemTpl.BARTER_PILE_OF_MEDS,
+                    count: 1
+                }
+            ]
+        ]},
         soldBy: Traders.THERAPIST,
         loyalLevel: {
-            buy: 2
-            // barter: 2
-        }
+            buy: 2,
+            barter: 1
+        },
+        deleteBarters: ["666aa327e8e00edadd0d24b5"] // EWR barter
     }),
     [ItemTpl.MEDKIT_IFAK_INDIVIDUAL_FIRST_AID_KIT]: createMedkitDetails({
         idForNewItem: CustomMedkitItemTpl.IFAK_FIST_AID_KIT,
@@ -201,14 +203,14 @@ const itemCfg: ItemCfg = {
         bundled: [ItemTpl.MEDICAL_ARMY_BANDAGE, ItemTpl.MEDICAL_CALOKB_HEMOSTATIC_APPLICATOR, ItemTpl.MEDICAL_CAT_HEMOSTATIC_TOURNIQUET],
         bundlePrice: 50000,
         currency: Money.ROUBLES,
-        customBarter: [
+        customBarter: { always: false, scheme: [
             [
                 {
                     _tpl: ItemTpl.BARTER_BOTTLE_OF_SALINE_SOLUTION,
                     count: 2
                 }
             ]
-        ],
+        ]},
         soldBy: Traders.THERAPIST,
         loyalLevel: {
             buy: 3,

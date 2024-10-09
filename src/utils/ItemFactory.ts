@@ -10,9 +10,10 @@ import type { ItemBaseClassService } from "@spt/services/ItemBaseClassService";
 import type { HashUtil } from "@spt/utils/HashUtil";
 import type { ICloner } from "@spt/utils/cloners/ICloner";
 import type { DependencyContainer } from "tsyringe";
+import { medkitCraftsToRemove } from "../db/hideout";
+import itemCfg, { type ItemCfgInfo } from "../db/itemCfg";
 import GridHelper from "./GridHelper";
 import type Logger from "./Logger";
-import itemCfg, { type ItemCfgInfo } from "./itemCfg";
 import type { ModFlags } from "./types/AppTypes";
 import type CfakConfig from "./types/CfakConfig";
 import { CustomNewItemTpl, OriginalMedkitItemTpl } from "./types/Item";
@@ -78,6 +79,12 @@ export default class ItemFactory
             const details = itemCfg[originalId];
             this.createItem(details, this.replaceOriginal, originalId);
             this.barterChanges(traders, details, this.replaceOriginal, originalId);
+        }
+
+        if (this.replaceOriginal)
+        {
+            // Remove medkit crafts since they don't make sense anymore
+            this.removeHideoutCrafts(medkitCraftsToRemove);
         }
     }
 
@@ -342,12 +349,23 @@ export default class ItemFactory
 
             if (replaceOriginal) 
             {
+                const barterItems = trader.assort?.items || [];
                 // Find all existing barter schemes for this item
-                for (const item of Object.values(trader.assort?.items))
+                for (let i = 0; i < barterItems.length; i++)
                 {
-                    if (item._tpl === idToUse) 
+                    const barterid = barterItems[i]._id;
+                    if (details.deleteBarters?.includes(barterid))
                     {
-                        barterIds.push(item._id);
+                        // Delete any specified barters
+                        trader.assort?.items.splice(i, 1);
+                        delete trader.assort?.barter_scheme?.[barterid];
+                        delete trader.assort?.loyal_level_items?.[barterid];
+                        i--;
+                        continue;
+                    }
+                    if (barterItems[i]._tpl === idToUse) 
+                    {
+                        barterIds.push(barterid);
                     }
                 }
             }
@@ -367,17 +385,17 @@ export default class ItemFactory
                     // Add custom item as a new barter
                     // Buy with money
                     const barterBuyId = this.getBarterId(idToUse, BarterSchemeType.BUY, 0);
-                    let newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
+                    const newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
                     this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
                     barterIds.push(barterBuyId);
-                    // Buy with barter items
-                    if (details.customBarter != null) 
-                    {
-                        const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
-                        newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
-                        barterIds.push(barterBarterId);
-                        this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
-                    }
+                }
+                // Buy with barter items
+                if (details.customBarter != null && (!replaceOriginal || details.customBarter.always)) 
+                {
+                    const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
+                    const newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
+                    barterIds.push(barterBarterId);
+                    this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
                 }
             }
 
@@ -392,8 +410,12 @@ export default class ItemFactory
                     gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
                 }
 
-                // Don't modify/add original buy/barter scheme info
-                if (replaceOriginal && bType !== BarterSchemeType.EMPTY) continue;
+                // Don't modify/add original buy/barter scheme info unless specified (customBarter.always)
+                if (
+                    replaceOriginal && 
+                    bType !== BarterSchemeType.EMPTY && 
+                    !(bType === BarterSchemeType.BARTER && details.customBarter.always)
+                ) continue;
                     
                 this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
 
@@ -402,7 +424,7 @@ export default class ItemFactory
                 switch (bType)
                 {
                     case BarterSchemeType.BARTER:
-                        barterScheme = details.customBarter;
+                        barterScheme = details.customBarter.scheme;
                         break;
                     case BarterSchemeType.BUY:
                         barterScheme = [
@@ -510,6 +532,25 @@ export default class ItemFactory
                 }
             }
             this.logger.debug(`Added to container whitelist grids: ${JSON.stringify(container._props.Grids, null, 4)}`)
+        }
+    }
+
+    /**
+     * Removes crafts from the hideout/production list
+     */
+    private removeHideoutCrafts(craftIds: string[]): void
+    {
+        if (craftIds.length === 0) return;
+
+        const productionList = ItemFactory.dbService.getHideout().production;
+        for (let i = 0; i < productionList.length; i++)
+        {
+            if (craftIds.includes(productionList[i]._id))
+            {
+                this.logger.debug(`Removing craft: ${productionList[i]._id} Product: ${productionList[i].endProduct}`);
+                productionList.splice(i, 1);
+                i--;
+            }
         }
     }
 }

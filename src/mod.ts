@@ -56,7 +56,7 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
         this.replaceBaseItems = this.cfakCfg.replaceBaseItems;
 
         this.setModFlags(preSptModLoader);
-        
+
         const customBotLootGenerator = new CustomBotLootGenerator(
             sptLogger,
             hashUtil,
@@ -76,7 +76,10 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             this.cfakCfg,
             this.logger
         )
-        
+            
+        // Extend loot generator to make bots spawn with items in medkits
+        // Note we don't add the new medkits to the loot pool, so if replaceBaseItems is false, the new medkits won't spawn (unless something else adds the items in loot pool)
+        // With replaceBaseItems = true, the medkits use the original IDs so will spawn on bots
         container.afterResolution<BotLootGenerator>(
             "BotLootGenerator",
             (_token, botLootGen: BotLootGenerator) => 
@@ -85,6 +88,7 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             }, { frequency: "Always" }
         );
         this.logger.log("Updated loot generator to include custom containers!");
+        
     }
 
     public postDBLoad(container: DependencyContainer): void 
@@ -95,9 +99,10 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
 
         ItemFactory.init(container);
         const itemFactory = new ItemFactory(this.cfakCfg, this.logger, this.modFlags);
+
         itemFactory.createBloodbag();
         itemFactory.createMedkits();
-        this.logger.log("Items added!");
+        this.logger.log("Finished initializing!");
     }
 
     // Get mods we need to run compatibility stuff for
