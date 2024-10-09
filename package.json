@@ -1,6 +1,6 @@
 {
   "name": "custom-first-aid-kits",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "kyoukopan",
   "sptVersion": "~3.9",
   "loadBefore": [],
