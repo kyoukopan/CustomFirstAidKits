@@ -342,12 +342,23 @@ export default class ItemFactory
 
             if (replaceOriginal) 
             {
+                const barterItems = trader.assort?.items || [];
                 // Find all existing barter schemes for this item
-                for (const item of Object.values(trader.assort?.items))
+                for (let i = 0; i < barterItems.length; i++)
                 {
-                    if (item._tpl === idToUse) 
+                    const barterid = barterItems[i]._id;
+                    if (details.deleteBarters?.includes(barterid))
                     {
-                        barterIds.push(item._id);
+                        // Delete any specified barters
+                        trader.assort?.items.splice(i, 1);
+                        delete trader.assort?.barter_scheme?.[barterid];
+                        delete trader.assort?.loyal_level_items?.[barterid];
+                        i--;
+                        continue;
+                    }
+                    if (barterItems[i]._tpl === idToUse) 
+                    {
+                        barterIds.push(barterid);
                     }
                 }
             }
@@ -367,17 +378,17 @@ export default class ItemFactory
                     // Add custom item as a new barter
                     // Buy with money
                     const barterBuyId = this.getBarterId(idToUse, BarterSchemeType.BUY, 0);
-                    let newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
+                    const newIdxDebug = this.addBaseContainerToAssortItems(barterBuyId, idToUse, trader);
                     this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
                     barterIds.push(barterBuyId);
-                    // Buy with barter items
-                    if (details.customBarter != null) 
-                    {
-                        const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
-                        newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
-                        barterIds.push(barterBarterId);
-                        this.logger.debug(`Added to assort items: ${trader.assort?.items[newIdxDebug]}`);
-                    }
+                }
+                // Buy with barter items
+                if (details.customBarter != null && (!replaceOriginal || details.customBarter.always)) 
+                {
+                    const barterBarterId = this.getBarterId(idToUse, BarterSchemeType.BARTER, 0);
+                    const newIdxDebug = this.addBaseContainerToAssortItems(barterBarterId, idToUse, trader);
+                    barterIds.push(barterBarterId);
+                    this.logger.debug(`Added to assort items: ${JSON.stringify(trader.assort?.items[newIdxDebug], null, 4)}`);
                 }
             }
 
@@ -392,8 +403,12 @@ export default class ItemFactory
                     gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
                 }
 
-                // Don't modify/add original buy/barter scheme info
-                if (replaceOriginal && bType !== BarterSchemeType.EMPTY) continue;
+                // Don't modify/add original buy/barter scheme info unless specified (customBarter.always)
+                if (
+                    replaceOriginal && 
+                    bType !== BarterSchemeType.EMPTY && 
+                    !(bType === BarterSchemeType.BARTER && details.customBarter.always)
+                ) continue;
                     
                 this.logger.debug(`Current barter to [add/update]: ${barterId}`, true);
 
@@ -402,7 +417,7 @@ export default class ItemFactory
                 switch (bType)
                 {
                     case BarterSchemeType.BARTER:
-                        barterScheme = details.customBarter;
+                        barterScheme = details.customBarter.scheme;
                         break;
                     case BarterSchemeType.BUY:
                         barterScheme = [
