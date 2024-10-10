@@ -17,5 +17,5 @@
   "allowInCustomContainers": [],
 
   "debug description": ["Adds additional logging to the server for debugging."],
-  "debug": true
+  "debug": false
 }
