@@ -306,14 +306,17 @@ export default class ItemFactory
             this.logger.debug(JSON.stringify(ItemFactory.handbook.Items[ItemFactory.handbook.Items.length - 1], null, 4));
 
             // Add to locales (not needed if replacing existing)
-            const locale = ItemFactory.dbService.getLocales().global.en;
-            locale[`${idToUse} Name`] = details.locale.name;
-            locale[`${idToUse} ShortName`] = details.locale.shortName;
-            locale[`${idToUse} Description`] = details.locale.description;
-            this.logger.debug("Item added to locales result:");
-            this.logger.debug(`Name: ${JSON.stringify(locale[`${idToUse} Name`], null, 4)}`);
-            this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
-            this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
+            const locales = ItemFactory.dbService.getLocales().global;
+            for (const locale of Object.values(locales)) 
+            {
+                locale[`${idToUse} Name`] = details.locale.name;
+                locale[`${idToUse} ShortName`] = details.locale.shortName;
+                locale[`${idToUse} Description`] = details.locale.description;
+                this.logger.debug("Item added to locales result:");
+                this.logger.debug(`Name: ${JSON.stringify(locale[`${idToUse} Name`], null, 4)}`);
+                this.logger.debug(`ShortName: ${JSON.stringify(locale[`${idToUse} ShortName`], null, 4)}`);
+                this.logger.debug(`Description: ${JSON.stringify(locale[`${idToUse} Description`], null, 4)}`);
+            }
         }
 
         // Whitelist in medical containers (since they're now in the Simple Containers base class, not medical items)
