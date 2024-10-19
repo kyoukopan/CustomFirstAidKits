@@ -410,7 +410,7 @@ export default class ItemFactory
                 // Add items to slots, obv empty buy scheme doesn't come with items...
                 if (bType !== BarterSchemeType.EMPTY && details.grids) 
                 {
-                    gridHelper.addItemsToGridSlots(barterId, trader.assort.items);
+                    gridHelper.addBundledItemsToGridSlots(barterId, trader.assort.items);
                 }
 
                 // Don't modify/add original buy/barter scheme info unless specified (customBarter.always)

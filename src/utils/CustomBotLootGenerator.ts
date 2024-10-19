@@ -22,7 +22,8 @@ import itemCfg, { type ItemCfgInfo } from "../db/itemCfg";
 import GridHelper from "./GridHelper";
 import type Logger from "./Logger";
 import type CfakConfig from "./types/CfakConfig";
-import { CustomMedkitItemTpl, OriginalMedkitItemTpl, customToOriginalMap } from "./types/Item";
+import { type CustomMedkitItemTpl, type OriginalMedkitItemTpl, customToOriginalMap, isCustomMedkitItemTpl, isOriginalMedkitItemTpl } from "./types/Item";
+import { addMedkitLoot, conditionallyAddMedkitLoot } from "./MedkitHelper";
 
 export default class CustomBotLootGenerator extends BotLootGenerator 
 {
@@ -92,44 +93,8 @@ export default class CustomBotLootGenerator extends BotLootGenerator
         super.addRequiredChildItemsToParent(itemToAddTemplate, itemToAddChildrenTo, isPmc, botRole);
         
         const itemTpl = itemToAddTemplate._id;
-
+        
         // Fill custom first aid kits - if we replace base items check for original ID, else check for custom ID
-        if (this.replaceBaseItems ? this.isOriginalMedkitItemTpl(itemTpl) : this.isCustomMedkitItemTpl(itemTpl)) 
-        {
-            // If replace, itemTpl is OriginalMedkitItemTl, if not, itemTpl is CustomMedkitItemTpl
-            const items = this.addMedkitLoot(itemToAddChildrenTo[0]._id, itemTpl as OriginalMedkitItemTpl | CustomMedkitItemTpl);
-            itemToAddChildrenTo.push(...items);
-            this.myLogger.debug(`itemToAddChildrenTo after pushing stuff ${JSON.stringify(itemToAddChildrenTo, null, 4)}`);
-        }
-    }
-
-    private isCustomMedkitItemTpl(str: string): str is CustomMedkitItemTpl 
-    {
-        return Object.values(CustomMedkitItemTpl).includes(str as CustomMedkitItemTpl);
-    }
-
-    private isOriginalMedkitItemTpl(str: string): str is OriginalMedkitItemTpl 
-    {
-        return Object.values(OriginalMedkitItemTpl).includes(str as OriginalMedkitItemTpl);
-    }
-
-    /**
-     * Based on {@link BotLootGenerator.createWalletLoot}
-     */
-    private addMedkitLoot(medkitId: string, itemTpl: CustomMedkitItemTpl | OriginalMedkitItemTpl): Item[]
-    {
-        const result: Item[] = [];
-        const medkitDetails: ItemCfgInfo = this.replaceBaseItems ? itemCfg[itemTpl] : itemCfg[customToOriginalMap[itemTpl]]; // If not replaceBaseItems, itemTpl passed in is the custom ID which we must reverse lookup since itemCfg is indexed by original Tpl id
-        const gridHelper = new GridHelper(medkitDetails, this.hashUtil, this.myLogger);
-        this.myLogger.debug(`Adding medkit loot to ${medkitDetails.idForNewItem}`);
-        const succ = gridHelper.addItemsToGridSlots(medkitId, result);
-        this.myLogger.debug(`Item array after adding stuffs: ${JSON.stringify(result, null, 4)}`);
-        if (!succ) 
-        {
-            this.myLogger.error(`Unable to add medkit loot to ${itemTpl} (${medkitDetails.idForNewItem})`);
-            return [];
-        }
-
-        return result;
+        conditionallyAddMedkitLoot(itemTpl, itemToAddChildrenTo, this.replaceBaseItems, this.myLogger, this.hashUtil);
     }
 }

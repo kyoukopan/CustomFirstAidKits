@@ -25,6 +25,14 @@ import ItemFactory from "./utils/ItemFactory";
 import Logger, { LoggerLvl } from "./utils/Logger";
 import type CfakConfig from "./utils/types/CfakConfig";
 import { ModNames, type ModFlags } from "./utils/types/AppTypes";
+import type { LocationGenerator } from "@spt/generators/LocationGenerator";
+import CustomLocationGenerator from "./utils/CustomLocationGenerator";
+import type { ObjectId } from "@spt/utils/ObjectId";
+import type { MathUtil } from "@spt/utils/MathUtil";
+import type { SeasonalEventService } from "@spt/services/SeasonalEventService";
+import type { ContainerHelper } from "@spt/helpers/ContainerHelper";
+import type { PresetHelper } from "@spt/helpers/PresetHelper";
+import type { ItemFilterService } from "@spt/services/ItemFilterService";
 
 class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod 
 {
@@ -52,6 +60,12 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
         const configServer = container.resolve<ConfigServer>("ConfigServer");
         const cloner = container.resolve<ICloner>("PrimaryCloner");
         const preSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
+        const objectId = container.resolve<ObjectId>("objectId");
+        const mathUtil = container.resolve<MathUtil>("mathUtil");
+        const seasonalEventService = container.resolve<SeasonalEventService>("seasonalEventService");
+        const containerHelper = container.resolve<ContainerHelper>("containerHelper");
+        const presetHelper = container.resolve<PresetHelper>("presetHelper");
+        const itemFilterService = container.resolve<ItemFilterService>("itemFilterService");
         this.logger = new Logger(this.cfakCfg, sptLogger);
         this.replaceBaseItems = this.cfakCfg.replaceBaseItems;
 
@@ -76,6 +90,25 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
             this.cfakCfg,
             this.logger
         )
+
+        const customLocationGenerator = new CustomLocationGenerator(
+            sptLogger,
+            databaseService,
+            objectId,
+            randomUtil,
+            itemHelper,
+            mathUtil,
+            seasonalEventService,
+            containerHelper,
+            presetHelper,
+            localisationService,
+            itemFilterService,
+            configServer,
+            cloner,
+            this.cfakCfg,
+            hashUtil,
+            this.logger
+        )
             
         // Extend loot generator to make bots spawn with items in medkits
         // Note we don't add the new medkits to the loot pool, so if replaceBaseItems is false, the new medkits won't spawn (unless something else adds the items in loot pool)
@@ -87,7 +120,15 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
                 botLootGen.generateLoot = (...args): void => customBotLootGenerator.generateLoot(...args);
             }, { frequency: "Always" }
         );
-        this.logger.log("Updated loot generator to include custom containers!");
+        container.afterResolution<LocationGenerator>(
+            "LocationGenerator",
+            (_token, locationGenerator: LocationGenerator) => 
+            {
+                locationGenerator.generateStaticContainers = (...args) => customLocationGenerator.generateStaticContainers(...args);
+                locationGenerator.generateDynamicLoot = (...args) => customLocationGenerator.generateDynamicLoot(...args);
+            }, { frequency: "Always" }
+        );
+        this.logger.log("Updated loot generators to fill custom containers!");
         
     }
 
