@@ -60,12 +60,12 @@ class CustomFirstAidKits implements IPostDBLoadMod, IPreSptLoadMod
         const configServer = container.resolve<ConfigServer>("ConfigServer");
         const cloner = container.resolve<ICloner>("PrimaryCloner");
         const preSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
-        const objectId = container.resolve<ObjectId>("objectId");
-        const mathUtil = container.resolve<MathUtil>("mathUtil");
-        const seasonalEventService = container.resolve<SeasonalEventService>("seasonalEventService");
-        const containerHelper = container.resolve<ContainerHelper>("containerHelper");
-        const presetHelper = container.resolve<PresetHelper>("presetHelper");
-        const itemFilterService = container.resolve<ItemFilterService>("itemFilterService");
+        const objectId = container.resolve<ObjectId>("ObjectId");
+        const mathUtil = container.resolve<MathUtil>("MathUtil");
+        const seasonalEventService = container.resolve<SeasonalEventService>("SeasonalEventService");
+        const containerHelper = container.resolve<ContainerHelper>("ContainerHelper");
+        const presetHelper = container.resolve<PresetHelper>("PresetHelper");
+        const itemFilterService = container.resolve<ItemFilterService>("ItemFilterService");
         this.logger = new Logger(this.cfakCfg, sptLogger);
         this.replaceBaseItems = this.cfakCfg.replaceBaseItems;
 
