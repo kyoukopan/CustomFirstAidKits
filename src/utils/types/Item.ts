@@ -34,3 +34,13 @@ export const customToOriginalMap: Record<CustomReplacementItemTpl, OriginalItemT
     [CustomMedkitItemTpl.AFAK_FIRST_AID_KIT]: OriginalMedkitItemTpl.AFAK_FIRST_AID_KIT,
     [CustomMedkitItemTpl.GRIZZLY_FIRST_AID_KIT]: OriginalMedkitItemTpl.GRIZZLY_FIRST_AID_KIT
 }
+
+export function isCustomMedkitItemTpl(str: string): str is CustomMedkitItemTpl 
+{
+    return Object.values(CustomMedkitItemTpl).includes(str as CustomMedkitItemTpl);
+}
+
+export function isOriginalMedkitItemTpl(str: string): str is OriginalMedkitItemTpl 
+{
+    return Object.values(OriginalMedkitItemTpl).includes(str as OriginalMedkitItemTpl);
+}

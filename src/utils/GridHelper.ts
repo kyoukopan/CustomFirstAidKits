@@ -38,7 +38,7 @@ export default class GridHelper
      * @param items Items array to add to (e.g. a trader assort's items array, a bot's inventory array)
      * @returns whether it was successful
      */
-    public addItemsToGridSlots(
+    public addBundledItemsToGridSlots(
         parentId: string, 
         items: Item[])
         : boolean
